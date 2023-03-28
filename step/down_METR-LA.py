@@ -8,7 +8,7 @@ import torch
 from easydict import EasyDict
 from basicts.utils.serialization import load_adj
 
-from .step_arch import STEP
+from .step_arch import STGCN
 from .step_runner import STEPRunner
 from .step_loss import step_loss
 from .step_data import ForecastingDataset
@@ -27,7 +27,7 @@ CFG.DATASET_OUTPUT_LEN = 12
 CFG.DATASET_ARGS = {
     "seq_len": 288 * 7
     }
-CFG.GPU_NUM = 1
+CFG.GPU_NUM = 2
 
 # ================= environment ================= #
 CFG.ENV = EasyDict()
@@ -37,8 +37,8 @@ CFG.ENV.CUDNN.ENABLED = True
 
 # ================= model ================= #
 CFG.MODEL = EasyDict()
-CFG.MODEL.NAME = "STEP"
-CFG.MODEL.ARCH = STEP
+CFG.MODEL.NAME = "STGCN"
+CFG.MODEL.ARCH = STGCN
 adj_mx, _ = load_adj("datasets/" + CFG.DATASET_NAME + "/adj_mx.pkl", "doubletransition")
 CFG.MODEL.PARAM = {
     "dataset_name": CFG.DATASET_NAME,

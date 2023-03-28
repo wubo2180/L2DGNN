@@ -5,7 +5,10 @@ from argparse import ArgumentParser
 # TODO: remove it when basicts can be installed by pip
 sys.path.append(os.path.abspath(__file__ + "/../.."))
 from basicts import launch_training
-
+# sys.path.append(os.path.abspath(__file__+"/../"))
+# sys.path.append(os.path.abspath(__file__))
+print(os.path.abspath(__file__+"/../"))
+print(sys.path)
 
 def parse_args():
     parser = ArgumentParser(description="Run time series forecasting model in BasicTS framework!")
@@ -24,3 +27,4 @@ if __name__ == "__main__":
     args = parse_args()
 
     launch_training(args.cfg, args.gpus)
+    

@@ -57,7 +57,7 @@ class BaseTimeSeriesForecastingRunner(BaseRunner):
         Args:
             cfg (dict): config
         """
-
+        # print('####')
         super().init_training(cfg)
         for key, _ in self.metrics.items():
             self.register_epoch_meter("train_"+key, "train", "{:.4f}")
