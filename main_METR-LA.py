@@ -11,6 +11,8 @@ import yaml
 from argparse import ArgumentParser
 from stgcn_arch import STGCN
 from step.step_data import ForecastingDataset
+from step.step_data import PretrainingDataset
+from torch.utils.data import Dataset, DataLoader
 # 设置设备
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -35,8 +37,13 @@ def load_dataset():
 def main(config):
     # 加载数据集
     # load_dataset()
-    dataset = ForecastingDataset(config)
-
+    # dataset = ForecastingDataset('datasets/METR-LA/data_in12_out12.pkl','datasets/METR-LA/index_in12_out12.pkl','train',2016)
+    dataset = PretrainingDataset('datasets/METR-LA/data_in2016_out12.pkl','datasets/METR-LA/index_in2016_out12.pkl','train')
+    
+    print(dataset[0][0].shape)
+    print(dataset[0][1].shape)
+    dd
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
     net = STGCN()
     net.to(device)
 
@@ -110,9 +117,9 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(0)
     config['device'] = device
-    print('#####')
+    print(config['device'])
     print(config['OPTIM']['LR'])
-    dd
+    # dd
     main(config)
     
 # with open(yaml_path,'r') as file:

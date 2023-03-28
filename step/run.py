@@ -7,8 +7,8 @@ sys.path.append(os.path.abspath(__file__ + "/../.."))
 from basicts import launch_training
 # sys.path.append(os.path.abspath(__file__+"/../"))
 # sys.path.append(os.path.abspath(__file__))
-print(os.path.abspath(__file__+"/../"))
-print(sys.path)
+# print(os.path.abspath(__file__+"/../"))
+# print(sys.path)
 
 def parse_args():
     parser = ArgumentParser(description="Run time series forecasting model in BasicTS framework!")
