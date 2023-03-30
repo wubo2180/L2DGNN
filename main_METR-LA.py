@@ -13,6 +13,10 @@ from stgcn_arch import STGCN
 from step.step_data import ForecastingDataset
 from step.step_data import PretrainingDataset
 from torch.utils.data import Dataset, DataLoader
+from basicts.utils import load_adj
+from metrics.mae import masked_mae
+from metrics.mape import masked_mape
+from metrics.rmse import masked_rmse
 # 设置设备
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -31,6 +35,49 @@ testset = torchvision.datasets.MNIST(root='./data', train=False,
 testloader = torch.utils.data.DataLoader(testset, batch_size=64,
                                          shuffle=False, num_workers=2)
 
+def test(self):
+    """Evaluate the model.
+
+    Args:
+        train_epoch (int, optional): current epoch if in training process.
+    """
+
+    # test loop
+    prediction = []
+    real_value = []
+    for _, data in enumerate(self.test_data_loader):
+        forward_return = self.forward(data, epoch=None, iter_num=None, train=False)
+        prediction.append(forward_return[0])        # preds = forward_return[0]
+        real_value.append(forward_return[1])        # testy = forward_return[1]
+
+    prediction = torch.cat(prediction, dim=0)
+    real_value = torch.cat(real_value, dim=0)
+    # re-scale data
+    prediction = SCALER_REGISTRY.get(self.scaler["func"])(
+        prediction, **self.scaler["args"])
+    real_value = SCALER_REGISTRY.get(self.scaler["func"])(
+        real_value, **self.scaler["args"])
+    # summarize the results.
+    # test performance of different horizon
+    for i in self.evaluation_horizons:
+        # For horizon i, only calculate the metrics **at that time** slice here.
+        pred = prediction[:, i, :, :]
+        real = real_value[:, i, :, :]
+        # metrics
+        metric_results = {}
+        for metric_name, metric_func in self.metrics.items():
+            metric_item = self.metric_forward(metric_func, [pred, real])
+            metric_results[metric_name] = metric_item.item()
+        log = "Evaluate best model on test data for horizon " + \
+            "{:d}, Test MAE: {:.4f}, Test RMSE: {:.4f}, Test MAPE: {:.4f}"
+        log = log.format(
+            i+1, metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"])
+        self.logger.info(log)
+    # test performance overall
+    for metric_name, metric_func in self.metrics.items():
+        metric_item = self.metric_forward(metric_func, [prediction, real_value])
+        self.update_epoch_meter("test_"+metric_name, metric_item.item())
+        metric_results[metric_name] = metric_item.item()
 
 def load_dataset():
     pass
@@ -40,16 +87,37 @@ def main(config):
     # dataset = ForecastingDataset('datasets/METR-LA/data_in12_out12.pkl','datasets/METR-LA/index_in12_out12.pkl','train',2016)
     dataset = PretrainingDataset('datasets/METR-LA/data_in2016_out12.pkl','datasets/METR-LA/index_in2016_out12.pkl','train')
     
-    print(dataset[0][0].shape)
+    print(dataset[1][0].shape)
     print(dataset[0][1].shape)
-    dd
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
-    net = STGCN()
-    net.to(device)
+    # adj_mx = '/dataset/METR-LA/adj_mx.pkl'
+    adj_mx, _ = load_adj("./datasets/METR-LA/adj_mx.pkl", "normlap")
 
+    adj_mx = torch.Tensor(adj_mx[0])
+    print('adj_mx',adj_mx.shape)
+    config['MODEL']['STGCN']['gso'] = adj_mx
+    train_data_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+    net = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
+                config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
+                config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
+                config['MODEL']['STGCN']['droprate'])
+    # print(net)
+    net.to(device)
     # 定义损失函数和优化器
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=config['OPTIM']['LR'], momentum=config['OPTIM']['MOMENTUM'])
+    # dd
+    for epoch in range(config['TRAIN']['EPOCHS']):
+        for data in train_data_loader:
+            optimizer.zero_grad()
+            print(data[1].shape)
+            print(data[0].shape)
+            preds = net(data[0].to(device),data[1].to(device),32,epoch,True)
+            print(preds.shape)
+            loss = masked_mae(preds,labels)
+            loss.backward()
+            optimizer.step()
+    print('Finished Training')
     # 训练网络
     for epoch in range(config['TRAIN']['EPOCHS']):
         running_loss = 0.0
