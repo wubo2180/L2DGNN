@@ -1,5 +1,6 @@
 import argparse
 import time
+import functools
 import numpy as np
 import torch
 import torch.nn as nn
@@ -17,6 +18,7 @@ from basicts.utils import load_adj
 from metrics.mae import masked_mae
 from metrics.mape import masked_mape
 from metrics.rmse import masked_rmse
+from basicts.data.registry import SCALER_REGISTRY
 # 设置设备
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -34,7 +36,23 @@ testset = torchvision.datasets.MNIST(root='./data', train=False,
                                        download=True, transform=transform)
 testloader = torch.utils.data.DataLoader(testset, batch_size=64,
                                          shuffle=False, num_workers=2)
+def metric_forward(self, metric_func, args):
+    """Computing metrics.
 
+    Args:
+        metric_func (function, functools.partial): metric function.
+        args (list): arguments for metrics computation.
+    """
+
+    if isinstance(metric_func, functools.partial) and list(metric_func.keywords.keys()) == ["null_val"]:
+        # support partial(metric_func, null_val = something)
+        metric_item = metric_func(*args)
+    elif callable(metric_func):
+        # is a function
+        metric_item = metric_func(*args, null_val=self.null_val)
+    else:
+        raise TypeError("Unknown metric type: {0}".format(type(metric_func)))
+    return metric_item
 def test(self):
     """Evaluate the model.
 
@@ -59,14 +77,14 @@ def test(self):
         real_value, **self.scaler["args"])
     # summarize the results.
     # test performance of different horizon
-    for i in self.evaluation_horizons:
+    for i in range(config['TEST']['EVALUATION_HORIZONS']):
         # For horizon i, only calculate the metrics **at that time** slice here.
         pred = prediction[:, i, :, :]
         real = real_value[:, i, :, :]
         # metrics
         metric_results = {}
         for metric_name, metric_func in self.metrics.items():
-            metric_item = self.metric_forward(metric_func, [pred, real])
+            metric_item = metric_forward(metric_func, [pred, real])
             metric_results[metric_name] = metric_item.item()
         log = "Evaluate best model on test data for horizon " + \
             "{:d}, Test MAE: {:.4f}, Test RMSE: {:.4f}, Test MAPE: {:.4f}"
