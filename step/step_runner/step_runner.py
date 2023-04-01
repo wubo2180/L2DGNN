@@ -72,4 +72,5 @@ class STEPRunner(BaseTimeSeriesForecastingRunner):
         # post process
         prediction = self.select_target_features(prediction)
         real_value = self.select_target_features(future_data)
+
         return prediction, real_value, pred_adj, prior_adj, gsl_coefficient

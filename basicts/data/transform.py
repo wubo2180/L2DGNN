@@ -55,7 +55,6 @@ def re_standard_transform(data: torch.Tensor, **kwargs) -> torch.Tensor:
     Returns:
         torch.Tensor: re-scaled data.
     """
-
     mean, std = kwargs["mean"], kwargs["std"]
     if isinstance(mean, np.ndarray):
         mean = torch.from_numpy(mean).type_as(data).to(data.device).unsqueeze(0)
