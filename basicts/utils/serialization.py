@@ -25,6 +25,7 @@ def load_pkl(pickle_file: str) -> object:
     except Exception as e:
         print("Unable to load data ", pickle_file, ":", e)
         raise
+
     return pickle_data
 
 

@@ -27,16 +27,17 @@ class ForecastingDataset(Dataset):
         self.data = torch.from_numpy(processed_data).float()
         # read index
         self.index = load_pkl(index_file_path)[mode]
+        # print(self.index)
         # length of long term historical data
         self.seq_len = seq_len
         # mask
         self.mask = torch.zeros(self.seq_len, self.data.shape[1], self.data.shape[2])
-        print('data_file_path')
-        print(data_file_path)
-        print(index_file_path)
-        print(mode)
-        print(seq_len)
-        dd
+        # print('data_file_path')
+        # print(data_file_path)
+        # print(index_file_path)
+        # print(mode)
+        # print(seq_len)
+        # dd
     def _check_if_file_exists(self, data_file_path: str, index_file_path: str):
         """Check if data file and index file exist.
 
