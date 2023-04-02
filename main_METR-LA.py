@@ -1,4 +1,5 @@
 import argparse
+import os
 import time
 import functools
 import numpy as np
@@ -22,6 +23,7 @@ from basicts.data import SCALER_REGISTRY
 from basicts.utils import load_pkl
 from tqdm import tqdm
 from MLP_arch import MultiLayerPerceptron
+from gwnet_arch import GraphWaveNet
 
 def metric_forward(metric_func, args):
     """Computing metrics.
@@ -144,44 +146,41 @@ def train(train_data_loader,model,config,scaler,optimizer):
         metric_results[metric_name] = metric_item.item()
     print("Evaluate train data" + \
                 "train MAE: {:.4f}, train RMSE: {:.4f}, train MAPE: {:.4f}".format(metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"]))
-
-def load_dataset():
-    pass
+    
 def main(config):
     # 加载数据集
-    # load_dataset()
-    # datasets/METR-LA/data_in2016_out12.pkl datasets/METR-LA/data_in12_out12.pkl datasets/METR-LA/index_in12_out12.pkl
-    # dataset = ForecastingDataset('datasets/METR-LA/data_in12_out12.pkl','datasets/METR-LA/index_in12_out12.pkl','train',2016)
-    '../BasicTS/datasets/METR-LA/data_in12_out12.pkl' '../BasicTS/datasets/METR-LA/index_in12_out12.pkl'
-    train_dataset = PretrainingDataset('../BasicTS/datasets/METR-LA/data_in12_out12.pkl','../BasicTS/datasets/METR-LA/index_in12_out12.pkl','train')
-    val_dataset = PretrainingDataset('../BasicTS/datasets/METR-LA/data_in12_out12.pkl','../BasicTS/datasets/METR-LA/index_in12_out12.pkl','valid')
-    test_dataset = PretrainingDataset('../BasicTS/datasets/METR-LA/data_in12_out12.pkl','../BasicTS/datasets/METR-LA/index_in12_out12.pkl','test')
+
+    train_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'train')
+    val_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'valid')
+    test_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'test')
 
     print(len(train_dataset))
     print(len(val_dataset))
     print(len(test_dataset))
-    # adj_mx = '/dataset/METR-LA/adj_mx.pkl'
-    adj_mx, _ = load_adj("./datasets/METR-LA/adj_mx.pkl", "normlap")
+ 
+    adj_mx, _ = load_adj(config['GENERAL']['ADJ_DIR'], "normlap")
 
     adj_mx = torch.Tensor(adj_mx[0])
-    scaler = load_pkl("datasets/" + config['GENERAL']['DATASET_NAME'] + "/scaler_in{0}_out{1}.pkl".format(
-                                                config['GENERAL']["DATASET_INPUT_LEN"], config['GENERAL']["DATASET_OUTPUT_LEN"]))
+    config['MODEL']['STGCN']['n_vertex'] = adj_mx.shape[0]
+    scaler = load_pkl(config['GENERAL']['SCALER_DIR'])
 
     print('adj_mx',adj_mx.shape)
     config['MODEL']['STGCN']['gso'] = adj_mx
-    train_data_loader = DataLoader(train_dataset, batch_size=32, shuffle=False)
+    train_data_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_data_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     test_data_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-    model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
-                config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
-                config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
-                config['MODEL']['STGCN']['droprate'])
-    # model = MultiLayerPerceptron(12,12,32)
+    # model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
+    #             config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
+    #             config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
+    #             config['MODEL']['STGCN']['droprate'])
+    model = MultiLayerPerceptron(12,12,32)
+    # model = GraphWaveNet(config['MODEL']['STGCN']['n_vertex'],in_dim=3)
     # print(net)
+    model.load_state_dict(torch.load(config['GENERAL']['MODEL_SAVE_PATH']+'5/STGCN.pt'))
     model.to(device)
-    # 定义损失函数和优化器
-    criterion = nn.CrossEntropyLoss()
+    # 定义优化器
+    # torch.load()
     optimizer = optim.Adam(model.parameters(), lr=config['OPTIM']['LR'], weight_decay=1.0e-5,eps=1.0e-8)
     print(optimizer)
     # dd
@@ -190,6 +189,12 @@ def main(config):
         train(train_data_loader,model,config,scaler,optimizer)
         val(val_data_loader,model,config,scaler)
         test(test_data_loader,model,config,scaler)
+        path = config['GENERAL']['MODEL_SAVE_PATH']+str(epoch)
+        if not os.path.exists(path):
+            os.mkdir(path)
+            file = os.path.join(path,config['GENERAL']['MODEL_NAME']+'.pt')
+            print(file)
+            torch.save(model.state_dict(), file)
     
 
 if __name__ == "__main__":

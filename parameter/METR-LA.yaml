@@ -1,12 +1,18 @@
 # ============ general ============ #
 GENERAL:
     DESCRIPTION: 'STGCN model configuration'
+    MODEL_NAME: 'STGCN'
     DATASET_NAME : "METR-LA"
     DATASET_TYPE : "Traffic speed"
     DATASET_INPUT_LEN : 12
     DATASET_OUTPUT_LEN : 12
     GPU_NUM : 1
     DEVICE: ''
+    DATASET_DIR: '../BasicTS/datasets/METR-LA/data_in12_out12.pkl'
+    DATASET_INDEX_DIR: '../BasicTS/datasets/METR-LA/index_in12_out12.pkl'
+    SCALER_DIR: '../BasicTS/datasets/METR-LA/scaler_in12_out12.pkl'
+    ADJ_DIR: "../BasicTS/datasets/METR-LA/adj_mx.pkl"
+    MODEL_SAVE_PATH: 'checkpoints/METR-LA/'
 # ============ optim ============ #
 OPTIM:
     LR: 0.002
