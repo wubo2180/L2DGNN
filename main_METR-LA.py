@@ -170,14 +170,14 @@ def main(config):
     val_data_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     test_data_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-    # model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
-    #             config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
-    #             config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
-    #             config['MODEL']['STGCN']['droprate'])
-    model = MultiLayerPerceptron(12,12,32)
+    model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
+                config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
+                config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
+                config['MODEL']['STGCN']['droprate'])
+    # model = MultiLayerPerceptron(12,12,32)
     # model = GraphWaveNet(config['MODEL']['STGCN']['n_vertex'],in_dim=3)
     # print(net)
-    model.load_state_dict(torch.load(config['GENERAL']['MODEL_SAVE_PATH']+'5/STGCN.pt'))
+    # model.load_state_dict(torch.load(config['GENERAL']['MODEL_SAVE_PATH']+'5/STGCN.pt'))
     model.to(device)
     # 定义优化器
     # torch.load()
@@ -189,12 +189,12 @@ def main(config):
         train(train_data_loader,model,config,scaler,optimizer)
         val(val_data_loader,model,config,scaler)
         test(test_data_loader,model,config,scaler)
-        path = config['GENERAL']['MODEL_SAVE_PATH']+str(epoch)
-        if not os.path.exists(path):
-            os.mkdir(path)
-            file = os.path.join(path,config['GENERAL']['MODEL_NAME']+'.pt')
-            print(file)
-            torch.save(model.state_dict(), file)
+        # path = config['GENERAL']['MODEL_SAVE_PATH']+str(epoch)
+        # if not os.path.exists(path):
+        #     os.mkdir(path)
+        #     file = os.path.join(path,config['GENERAL']['MODEL_NAME']+'.pt')
+        #     print(file)
+        #     torch.save(model.state_dict(), file)
     
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ import pickle
 
 import torch
 import numpy as np
-
+import numpy.ma as ma
 from .adjacent_matrix_norm import calculate_scaled_laplacian, calculate_symmetric_normalized_laplacian, calculate_symmetric_message_passing_adj, calculate_transition_matrix
 
 
@@ -55,10 +55,40 @@ def load_adj(file_path: str, adj_type: str):
 
     try:
         # METR and PEMS_BAY
-        _, _, adj_mx = load_pkl(file_path)
+        a, b, adj_mx = load_pkl(file_path)
+        # print(adj_mx)
+        
+        
+#         np.savetxt('D:\\python_workspace\\L2DGNN\\1.txt', np.c_[adj_mx],
+#  fmt='%d',delimiter='\t')
+
+        # with open('D:\\python_workspace\\L2DGNN\\1.txt', 'w') as f:
+        #     for i in range (len (adj_mx)): 
+        #         f.write(str(adj_mx[i])+'\n')
+
+        # dd
     except ValueError:
         # PEMS04
         adj_mx = load_pkl(file_path)
+    # print(adj_mx.shape)
+    # print(adj_mx)
+    # print(np.sum(adj_mx>0))
+    # adj_mx_flatten = adj_mx.flatten()
+    # nums = adj_mx.shape[0]
+    
+    # mask = np.random.choice([0, 1], size=adj_mx_flatten.shape[0], p=[.2, .8])
+
+    # # mask = np.random.randint(0,2,adj_mx_flatten.shape[0])
+    # # print(mask)
+    # # dd
+    # adj_mx = (adj_mx_flatten*mask).reshape(nums,nums)
+    # print(np.sum(adj_mx>0))
+    # n = adj_mx.shape[0]
+    # adj_mx[range(n), range(n)] = 0
+    # print(adj_mx.shape)
+    # print(adj_mx)
+    # print(np.sum(adj_mx>0))
+    # # dd
     if adj_type == "scalap":
         adj = [calculate_scaled_laplacian(adj_mx).astype(np.float32).todense()]
     elif adj_type == "normlap":
