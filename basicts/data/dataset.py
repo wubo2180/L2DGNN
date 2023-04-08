@@ -4,7 +4,9 @@ import torch
 from torch.utils.data import Dataset
 
 from ..utils import load_pkl
-
+from torch_geometric.utils import dense_to_sparse,negative_sampling
+import random
+import numpy as np
 
 class TimeSeriesForecastingDataset(Dataset):
     """Time series forecasting dataset."""
@@ -20,7 +22,7 @@ class TimeSeriesForecastingDataset(Dataset):
         # read index
         self.index = load_pkl(index_file_path)[mode]
         # print('###')
-        print(self.index[0])
+        # print(self.index[0])
 
     def _check_if_file_exists(self, data_file_path: str, index_file_path: str):
         """Check if data file and index file exist.

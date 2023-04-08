@@ -25,6 +25,7 @@ from tqdm import tqdm
 from MLP_arch import MultiLayerPerceptron
 from gwnet_arch import GraphWaveNet
 import learn2learn as l2l
+from utils import edge_index_transform
 # from torch_geometric.utils import negative_sampling,structured_negative_sampling,to_dense_adj,dense_to_sparse,to_torch_coo_tensor,to_torch_csr_tensor,to_torch_csc_tensor
 def metric_forward(metric_func, args):
     """Computing metrics.
@@ -161,7 +162,7 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
 def main(config):
     # 加载数据集
 
-    train_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'train')
+    train_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'train',transforms=edge_index_transform)
     
     
     # train_dataset[0]

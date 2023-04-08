@@ -71,3 +71,20 @@ def aug_random_mask(input_feature, drop_percent=0.2,dim_drop=0.5):
         # print(mask_dim)
         aug_feature[i][random.sample(dim_idx, mask_dim)] = 0
     return aug_feature
+
+class edge_index_transform(object):
+    def __init__(self, adj_mx, num_sampled_edges) -> None:
+        self.adj_mx = adj_mx
+        self.num_sampled_edges = num_sampled_edges
+    def __call__(self, ):
+        
+        print('edge_index')
+        self.adj_mx[self.adj_mx>0] = 1.0
+        adj_mx_tensor = torch.from_numpy(self.adj_mx).long()
+        edge_index, _ = dense_to_sparse(adj_mx_tensor)
+        negative_edge_index = negative_sampling(edge_index)
+        num_edges = edge_index.shape[1]
+        perm = np.random.randint(num_edges, size=self.num_sampled_edges)
+        pos_edge_index = edge_index[:,perm]
+        neg_edge_index = negative_edge_index[:,perm]
+        return pos_edge_index,neg_edge_index
