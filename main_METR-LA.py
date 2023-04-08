@@ -24,7 +24,8 @@ from basicts.utils import load_pkl
 from tqdm import tqdm
 from MLP_arch import MultiLayerPerceptron
 from gwnet_arch import GraphWaveNet
-
+import learn2learn as l2l
+# from torch_geometric.utils import negative_sampling,structured_negative_sampling,to_dense_adj,dense_to_sparse,to_torch_coo_tensor,to_torch_csr_tensor,to_torch_csc_tensor
 def metric_forward(metric_func, args):
     """Computing metrics.
 
@@ -111,14 +112,16 @@ def test(test_data_loader,model,config,scaler):
 
             print("Evaluate best model on test data for horizon " + \
                 "{:d}, Test MAE: {:.4f}, Test RMSE: {:.4f}, Test MAPE: {:.4f}".format(i+1,metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"]))
-def train(train_data_loader,model,config,scaler,optimizer):
+def train(train_data_loader,model,config,scaler,optimizer,maml):
     model.train()
     metrics = {"MAE": masked_mae, "RMSE": masked_rmse, "MAPE": masked_mape}
     prediction = []
     real_value = []
     
     for data in tqdm(train_data_loader):
-        optimizer.zero_grad()
+        # learner = maml.clone()
+
+        
         future_data = data[0].to(device)
         history_data = data[1].to(device)
 
@@ -128,8 +131,16 @@ def train(train_data_loader,model,config,scaler,optimizer):
         labels = future_data[:, :, :, config["MODEL"]["TARGET_FEATURES"]]
         prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
         real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
-        loss = metric_forward(masked_mae, [prediction_rescaled,real_value_rescaled])
+        # for _ in range(adapt_steps): # adaptation_steps
+        #     support_preds = learner(x_support)
+        #     support_loss=lossfn(support_preds, y_support)
+        #     learner.adapt(support_loss)
 
+        #     query_preds = learner(x_query)
+        #     query_loss = lossfn(query_preds, y_query)
+        #     meta_train_loss += query_loss
+        loss = metric_forward(masked_mae, [prediction_rescaled,real_value_rescaled])
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
@@ -151,6 +162,10 @@ def main(config):
     # 加载数据集
 
     train_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'train')
+    
+    
+    # train_dataset[0]
+    # dd
     val_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'valid')
     test_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'test')
 
@@ -163,7 +178,7 @@ def main(config):
     adj_mx = torch.Tensor(adj_mx[0])
     config['MODEL']['STGCN']['n_vertex'] = adj_mx.shape[0]
     scaler = load_pkl(config['GENERAL']['SCALER_DIR'])
-
+    # print(dense_to_sparse(adj_mx))
     print('adj_mx',adj_mx.shape)
     config['MODEL']['STGCN']['gso'] = adj_mx
     train_data_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
@@ -181,12 +196,15 @@ def main(config):
     model.to(device)
     # 定义优化器
     # torch.load()
+    # model = SineModel(dim=hidden_dim)
+    maml = l2l.algorithms.MAML(model, lr=config['OPTIM']['ADAPT_LR'], first_order=False, allow_unused=True)
+    # optimizer = optim.Adam(maml.parameters(), config['OPTIM']['META_LR'])
     optimizer = optim.Adam(model.parameters(), lr=config['OPTIM']['LR'], weight_decay=1.0e-5,eps=1.0e-8)
     print(optimizer)
     # dd
     for epoch in range(config['TRAIN']['EPOCHS']):
         print('============ epoch {:d} ============'.format(epoch))
-        train(train_data_loader,model,config,scaler,optimizer)
+        train(train_data_loader,model,config,scaler,optimizer,maml)
         val(val_data_loader,model,config,scaler)
         test(test_data_loader,model,config,scaler)
         # path = config['GENERAL']['MODEL_SAVE_PATH']+str(epoch)

@@ -19,6 +19,8 @@ class TimeSeriesForecastingDataset(Dataset):
         self.data = torch.from_numpy(processed_data).float()
         # read index
         self.index = load_pkl(index_file_path)[mode]
+        # print('###')
+        print(self.index[0])
 
     def _check_if_file_exists(self, data_file_path: str, index_file_path: str):
         """Check if data file and index file exist.
@@ -50,8 +52,13 @@ class TimeSeriesForecastingDataset(Dataset):
         idx = list(self.index[index])
         if isinstance(idx[0], int):
             # continuous index
+            # print(idx[0])
+            # print(idx[1])
+            
             history_data = self.data[idx[0]:idx[1]]
             future_data = self.data[idx[1]:idx[2]]
+            # print(history_data.shape)
+            # print(future_data.shape)
         else:
             # discontinuous index or custom index
             # NOTE: current time $t$ should not included in the index[0]
@@ -60,7 +67,7 @@ class TimeSeriesForecastingDataset(Dataset):
             history_index.append(idx[1])
             history_data = self.data[history_index]
             future_data = self.data[idx[1], idx[2]]
-
+        
         return future_data, history_data
 
     def __len__(self):
