@@ -7,11 +7,11 @@ from ..utils import load_pkl
 from torch_geometric.utils import dense_to_sparse,negative_sampling
 import random
 import numpy as np
-
+import math
 class TimeSeriesForecastingDataset(Dataset):
     """Time series forecasting dataset."""
 
-    def __init__(self, data_file_path: str, index_file_path: str, mode: str) -> None:
+    def __init__(self, data_file_path: str, index_file_path: str, mode: str,support_set_size, query_set_size, adj_mx) -> None:
         super().__init__()
         assert mode in ["train", "valid", "test"], "error mode"
         self._check_if_file_exists(data_file_path, index_file_path)
@@ -21,6 +21,11 @@ class TimeSeriesForecastingDataset(Dataset):
         self.data = torch.from_numpy(processed_data).float()
         # read index
         self.index = load_pkl(index_file_path)[mode]
+        self.num_sampled_edges = support_set_size + query_set_size
+        self.support_set_size = support_set_size
+        self.query_set_size = query_set_size
+        self.adj_mx = adj_mx
+        self.edge_index_list = self.create_edge_index(self.index)
         # print('###')
         # print(self.index[0])
 
@@ -40,6 +45,7 @@ class TimeSeriesForecastingDataset(Dataset):
             raise FileNotFoundError("BasicTS can not find data file {0}".format(data_file_path))
         if not os.path.isfile(index_file_path):
             raise FileNotFoundError("BasicTS can not find index file {0}".format(index_file_path))
+        
 
     def __getitem__(self, index: int) -> tuple:
         """Get a sample.
@@ -54,13 +60,9 @@ class TimeSeriesForecastingDataset(Dataset):
         idx = list(self.index[index])
         if isinstance(idx[0], int):
             # continuous index
-            # print(idx[0])
-            # print(idx[1])
-            
             history_data = self.data[idx[0]:idx[1]]
             future_data = self.data[idx[1]:idx[2]]
-            # print(history_data.shape)
-            # print(future_data.shape)
+
         else:
             # discontinuous index or custom index
             # NOTE: current time $t$ should not included in the index[0]
@@ -69,8 +71,10 @@ class TimeSeriesForecastingDataset(Dataset):
             history_index.append(idx[1])
             history_data = self.data[history_index]
             future_data = self.data[idx[1], idx[2]]
-        
-        return future_data, history_data
+        # 
+        edge_index_set = self.edge_index_list[index]
+        # return future_data, history_data, pos_edge_index, neg_edge_index
+        return future_data, history_data, edge_index_set
 
     def __len__(self):
         """Dataset length
@@ -80,3 +84,21 @@ class TimeSeriesForecastingDataset(Dataset):
         """
 
         return len(self.index)
+    def create_edge_index(self, length):
+        self.adj_mx[torch.abs(self.adj_mx)>0] = 1.0
+        edge_index, _ = dense_to_sparse(self.adj_mx.long())
+        negative_edge_index = negative_sampling(edge_index)
+        num_edges = edge_index.shape[1]
+        
+        edge_index_list = []
+        for i in range(length):
+            perm = np.random.randint(num_edges, size=self.num_sampled_edges)
+            pos_edge_index = edge_index[:,perm]
+            neg_edge_index = negative_edge_index[:,perm]
+            pos_sup_edge_index = pos_edge_index[:, :self.support_set_size]
+            neg_sup_edge_index = neg_edge_index[:, :self.support_set_size]
+            pos_que_edge_index = pos_edge_index[:, self.support_set_size:]
+            neg_que_edge_index = neg_edge_index[:, self.support_set_size:]
+            edge_index_list.append({'pos_sup_edge_index':pos_sup_edge_index,'neg_sup_edge_index':neg_sup_edge_index,'pos_que_edge_index':pos_que_edge_index,'neg_que_edge_index':neg_que_edge_index})
+        return edge_index_list
+        # return pos_edge_index,neg_edge_index

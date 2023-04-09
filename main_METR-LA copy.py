@@ -127,7 +127,7 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
     metrics = {"MAE": masked_mae, "RMSE": masked_rmse, "MAPE": masked_mape}
     prediction = []
     real_value = []
-    batch_size = config['Train']['DATA_BATCH_SIZE']
+    
     for data in tqdm(train_data_loader):
         learner = maml.clone()
 
@@ -147,13 +147,11 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         neg_sup_edge_index = edge_index_set['pos_sup_edge_index']
         pos_que_edge_index = edge_index_set['pos_que_edge_index']
         neg_que_edge_index = edge_index_set['neg_que_edge_index']
-        # for i in range(batch_size):
-            
-        for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
+        for i in range(1): #args.update_sapce_step
             support_space_loss = compute_space_loss(preds, pos_sup_edge_index, neg_sup_edge_index)
             # print(support_space_loss)
             learner.adapt(support_space_loss, allow_unused=True, allow_nograd = True)
-            query_space_loss += compute_space_loss(preds, pos_que_edge_index, neg_que_edge_index)
+            query_space_loss += compute_space_loss(preds,pos_que_edge_index,neg_que_edge_index)
         # for _ in range(adapt_steps): # adaptation_steps
         #     support_preds = learner(x_support)
         #     support_loss=lossfn(support_preds, y_support)
@@ -163,10 +161,10 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         #     query_loss = lossfn(query_preds, y_query)
         #     meta_train_loss += query_loss
 
-        query_space_loss = query_space_loss/batch_size
-        # loss = metric_forward(masked_mae, [prediction_rescaled,real_value_rescaled])
+        
+        loss = metric_forward(masked_mae, [prediction_rescaled,real_value_rescaled])
         optimizer.zero_grad()
-        query_space_loss.backward()
+        loss.backward()
         optimizer.step()
 
         prediction.append(prediction_rescaled.detach().cpu())        # preds = forward_return[0]

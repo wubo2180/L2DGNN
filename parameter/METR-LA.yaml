@@ -22,7 +22,12 @@ OPTIM:
     META_LR: 0.001
 METRICS: {"MAE": masked_mae, "RMSE": masked_rmse, "MAPE": masked_mape}
 
-
+# ============ META  ============ #
+META:
+    SUPPORT_SET_SIZE: 100
+    QUERY_SET_SIZE: 100
+    NUM_SAMPLED_EDGES: 1000
+    UPDATE_SAPCE_STEP: 1
 # # ============ environment ============ #
 # ENV:
 #     ENV : EasyDict()
@@ -55,7 +60,7 @@ TRAIN:
 # read data
     DATA_DIR : "datasets/METR-LA"
 # dataloader args, optional
-    DATA_BATCH_SIZE : 64
+    DATA_BATCH_SIZE : 32
     DATA_PREFETCH : False
     DATA_SHUFFLE : True
     DATA_NUM_WORKERS : 2
@@ -69,7 +74,7 @@ VAL:
 # read data
     DATA_DIR : "datasets/METR-LA"
 # dataloader args, optional
-    DATA_BATCH_SIZE : 64
+    DATA_BATCH_SIZE : 32
     DATA_PREFETCH : False
     DATA_SHUFFLE : False
     DATA_NUM_WORKERS : 2
@@ -84,7 +89,7 @@ TEST:
 # read data
     DATA_DIR : "datasets/METR-LA"
 # dataloader args, optional
-    DATA_BATCH_SIZE : 64
+    DATA_BATCH_SIZE : 32
     DATA_PREFETCH : False
     DATA_SHUFFLE : False
     DATA_NUM_WORKERS : 2
