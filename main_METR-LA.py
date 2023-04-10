@@ -29,16 +29,36 @@ from utils import edge_index_transform
 from collections import OrderedDict
 # from torch_geometric.utils import negative_sampling,structured_negative_sampling,to_dense_adj,dense_to_sparse,to_torch_coo_tensor,to_torch_csr_tensor,to_torch_csc_tensor
 def compute_space_loss(embedding, pos_edge_index,neg_edge_index):
-    # embedding = torch.relu(embedding)
+    # embedding shape B L N C 
+    
     criterion_space = nn.BCEWithLogitsLoss()
-
-    pos_score = torch.sum(embedding[pos_edge_index[:][:][0]] * embedding[pos_edge_index[:][:][1]], dim=2)
-    neg_score = torch.sum(embedding[neg_edge_index[:][:][0]] * embedding[neg_edge_index[:][:][1]], dim=2)
-    print(pos_score.shape)
-    dd
-    loss = criterion_space(pos_score, torch.ones_like(pos_score)) + \
+    B, L, src_edge, tar_edge = pos_edge_index.shape
+    loss = 0.0
+    for i in range(B):
+        for j in range(L):
+            pos_src_node_index = pos_edge_index[i][j][0]
+            pos_tar_node_index = pos_edge_index[i][j][1]
+            neg_src_node_index = neg_edge_index[i][j][0]
+            neg_tar_node_index = neg_edge_index[i][j][1]
+            # print(pos_src_node_index.shape)
+            # print(embedding[i][j][pos_src_node_index].shape)
+            # print(embedding[i][j][pos_src_node_index].shape)
+            # dd
+            pos_score = torch.sum(embedding[i][j][pos_src_node_index] * embedding[i][j][pos_tar_node_index], dim=1)
+            neg_score = torch.sum(embedding[i][j][neg_src_node_index] * embedding[i][j][neg_tar_node_index], dim=1)
+            
+            loss += criterion_space(pos_score, torch.ones_like(pos_score)) + \
            criterion_space(neg_score, torch.zeros_like(neg_score))
-    return loss
+            # print(pos_score.shape)
+    #         print(loss)
+    #         # dd
+    
+    # print(loss)
+    # print(B)
+    # print(L)
+    # print(loss/(B * L))
+    # dd
+    return loss/(B * L)
 def metric_forward(metric_func, args):
     """Computing metrics.
 
@@ -132,7 +152,7 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
     real_value = []
     batch_size = config['TRAIN']['DATA_BATCH_SIZE']
     for data in tqdm(train_data_loader):
-        # learner = maml.clone()
+        learner = maml.clone()
 
 
         query_space_loss = 0.0
@@ -143,18 +163,17 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         neg_sup_edge_index = data[3].to(device)
         pos_que_edge_index = data[4].to(device)
         neg_que_edge_index = data[5].to(device)
-
+        # print(pos_sup_edge_index.shape)
+        # print(neg_sup_edge_index.shape)
+        # print(pos_que_edge_index.shape)
+        # print(neg_que_edge_index.shape)
         preds = model(history_data,future_data,32,1,True)
 
         preds = preds[:, :, :, config["MODEL"]["FROWARD_FEATURES"]]
         labels = future_data[:, :, :, config["MODEL"]["TARGET_FEATURES"]]
         prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
         real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
-<<<<<<< HEAD
-        pos_sup_edge_index = edge_index_set['pos_sup_edge_index']
-        neg_sup_edge_index = edge_index_set['pos_sup_edge_index']
-        pos_que_edge_index = edge_index_set['pos_que_edge_index']
-        neg_que_edge_index = edge_index_set['neg_que_edge_index']
+
         # for i in range(batch_size):
             
         for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
@@ -167,8 +186,6 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         #     support_preds = learner(x_support)
         #     support_loss=lossfn(support_preds, y_support)
         #     learner.adapt(support_loss)
-=======
->>>>>>> 1efe06d6062fe9928cebbb80bade54976992511e
 
         # print('pos_sup_edge_index')
         # print(pos_sup_edge_index[:][:][0].shape)
@@ -177,18 +194,18 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         # print(neg_que_edge_index.shape)
         # dd
         # for i in range(batch_size):
-        fast_weights = OrderedDict(model.named_parameters())
+        # fast_weights = OrderedDict(model.named_parameters())
 
-        for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step compute support loss
-            support_space_loss = compute_space_loss(preds, pos_sup_edge_index, neg_sup_edge_index)
-            gradients = torch.autograd.grad(support_space_loss, fast_weights.values(), create_graph=True)
-            fast_weights = OrderedDict(
-                    (name, param - config['OPTIM']['ADAPT_LR'] * grad)
-                    for ((name, param), grad) in zip(fast_weights.items(), gradients)
-                )
-            query_space_loss += compute_space_loss(preds, pos_que_edge_index, neg_que_edge_index) # compute query loss
+        # for i in range(config['META']['UPDATE_SAPCE_STEP']): # args.update_sapce_step compute support loss
+        #     support_space_loss = compute_space_loss(preds, pos_sup_edge_index, neg_sup_edge_index)
+        #     gradients = torch.autograd.grad(support_space_loss, fast_weights.values(), create_graph=True)
+        #     fast_weights = OrderedDict(
+        #             (name, param - config['OPTIM']['ADAPT_LR'] * grad)
+        #             for ((name, param), grad) in zip(fast_weights.items(), gradients)
+        #         )
+        #     query_space_loss += compute_space_loss(preds, pos_que_edge_index, neg_que_edge_index) # compute query loss
 
-        query_space_loss = query_space_loss/batch_size
+        # query_space_loss = query_space_loss
         # loss = metric_forward(masked_mae, [prediction_rescaled,real_value_rescaled])
         # update model parameters
         optimizer.zero_grad()
@@ -233,7 +250,6 @@ def main(config):
     print(len(val_dataset))
     print(len(test_dataset))
  
-
     train_data_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_data_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     test_data_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)

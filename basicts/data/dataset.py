@@ -25,9 +25,11 @@ class TimeSeriesForecastingDataset(Dataset):
         self.support_set_size = support_set_size
         self.query_set_size = query_set_size
         self.adj_mx = adj_mx
-        self.pos_sup_edge_index, self.neg_sup_edge_index, self.pos_que_edge_index, self.neg_que_edge_index = self.create_edge_index(len(self.index))
+        # print(self.index[-1])
+        # dd
+        self.pos_sup_edge_index, self.neg_sup_edge_index, self.pos_que_edge_index, self.neg_que_edge_index = self.create_edge_index(self.index[-1][-1])
         # print('###')
-        # print(self.index)
+        
         # dd
 
     def _check_if_file_exists(self, data_file_path: str, index_file_path: str):
@@ -73,12 +75,19 @@ class TimeSeriesForecastingDataset(Dataset):
             history_data = self.data[history_index]
             future_data = self.data[idx[1], idx[2]]
         # 
+        # print(idx)
         pos_sup_edge_index = self.pos_sup_edge_index[idx[0]:idx[1]]
         neg_sup_edge_index = self.neg_sup_edge_index[idx[0]:idx[1]]
         pos_que_edge_index = self.pos_que_edge_index[idx[0]:idx[1]]
         neg_que_edge_index = self.neg_que_edge_index[idx[0]:idx[1]]
+        # print(pos_sup_edge_index.shape)
+        # print(neg_sup_edge_index.shape)
+        # print(pos_que_edge_index.shape)
+        # print(neg_que_edge_index.shape)
+        
+        # print(history_data.shape)
         # return future_data, history_data, pos_edge_index, neg_edge_index
-        return future_data, history_data, pos_sup_edge_index, neg_sup_edge_index, pos_que_edge_index, pos_que_edge_index, neg_que_edge_index
+        return future_data, history_data, pos_sup_edge_index, neg_sup_edge_index, pos_que_edge_index, neg_que_edge_index
 
     def __len__(self):
         """Dataset length
