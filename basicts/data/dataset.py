@@ -25,9 +25,10 @@ class TimeSeriesForecastingDataset(Dataset):
         self.support_set_size = support_set_size
         self.query_set_size = query_set_size
         self.adj_mx = adj_mx
-        self.edge_index_list = self.create_edge_index(self.index)
+        self.pos_sup_edge_index, self.neg_sup_edge_index, self.pos_que_edge_index, self.neg_que_edge_index = self.create_edge_index(len(self.index))
         # print('###')
-        # print(self.index[0])
+        # print(self.index)
+        # dd
 
     def _check_if_file_exists(self, data_file_path: str, index_file_path: str):
         """Check if data file and index file exist.
@@ -72,9 +73,12 @@ class TimeSeriesForecastingDataset(Dataset):
             history_data = self.data[history_index]
             future_data = self.data[idx[1], idx[2]]
         # 
-        edge_index_set = self.edge_index_list[index]
+        pos_sup_edge_index = self.pos_sup_edge_index[idx[0]:idx[1]]
+        neg_sup_edge_index = self.neg_sup_edge_index[idx[0]:idx[1]]
+        pos_que_edge_index = self.pos_que_edge_index[idx[0]:idx[1]]
+        neg_que_edge_index = self.neg_que_edge_index[idx[0]:idx[1]]
         # return future_data, history_data, pos_edge_index, neg_edge_index
-        return future_data, history_data, edge_index_set
+        return future_data, history_data, pos_sup_edge_index, neg_sup_edge_index, pos_que_edge_index, pos_que_edge_index, neg_que_edge_index
 
     def __len__(self):
         """Dataset length
@@ -82,23 +86,33 @@ class TimeSeriesForecastingDataset(Dataset):
         Returns:
             int: dataset length
         """
-
         return len(self.index)
+    
     def create_edge_index(self, length):
         self.adj_mx[torch.abs(self.adj_mx)>0] = 1.0
         edge_index, _ = dense_to_sparse(self.adj_mx.long())
         negative_edge_index = negative_sampling(edge_index)
         num_edges = edge_index.shape[1]
         
-        edge_index_list = []
+        pos_sup_edge_index = []
+        neg_sup_edge_index = []
+        pos_que_edge_index = []
+        neg_que_edge_index = []
         for i in range(length):
             perm = np.random.randint(num_edges, size=self.num_sampled_edges)
             pos_edge_index = edge_index[:,perm]
             neg_edge_index = negative_edge_index[:,perm]
-            pos_sup_edge_index = pos_edge_index[:, :self.support_set_size]
-            neg_sup_edge_index = neg_edge_index[:, :self.support_set_size]
-            pos_que_edge_index = pos_edge_index[:, self.support_set_size:]
-            neg_que_edge_index = neg_edge_index[:, self.support_set_size:]
-            edge_index_list.append({'pos_sup_edge_index':pos_sup_edge_index,'neg_sup_edge_index':neg_sup_edge_index,'pos_que_edge_index':pos_que_edge_index,'neg_que_edge_index':neg_que_edge_index})
-        return edge_index_list
+
+            pos_sup_edge_index.append(pos_edge_index[:, :self.support_set_size])
+            neg_sup_edge_index.append(neg_edge_index[:, :self.support_set_size])
+            pos_que_edge_index.append(pos_edge_index[:, self.support_set_size:])
+            neg_que_edge_index.append(neg_edge_index[:, self.support_set_size:])
+
+        pos_sup_edge_index = torch.stack(pos_sup_edge_index, dim=0)
+        neg_sup_edge_index = torch.stack(neg_sup_edge_index, dim=0)
+        pos_que_edge_index = torch.stack(pos_que_edge_index, dim=0)
+        neg_que_edge_index = torch.stack(neg_que_edge_index, dim=0)
+        
+
+        return pos_sup_edge_index, neg_sup_edge_index, pos_que_edge_index, neg_que_edge_index
         # return pos_edge_index,neg_edge_index
