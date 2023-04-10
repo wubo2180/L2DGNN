@@ -154,6 +154,7 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
             # print(support_space_loss)
             learner.adapt(support_space_loss, allow_unused=True, allow_nograd = True)
             query_space_loss += compute_space_loss(preds, pos_que_edge_index, neg_que_edge_index)
+        
         # for _ in range(adapt_steps): # adaptation_steps
         #     support_preds = learner(x_support)
         #     support_loss=lossfn(support_preds, y_support)
