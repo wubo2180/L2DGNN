@@ -178,7 +178,7 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
             
         for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
             support_space_loss = compute_space_loss(preds, pos_sup_edge_index, neg_sup_edge_index)
-            # print(support_space_loss)
+            print(support_space_loss.item())
             learner.adapt(support_space_loss, allow_unused=True, allow_nograd = True)
             query_space_loss += compute_space_loss(preds, pos_que_edge_index, neg_que_edge_index)
         
@@ -208,6 +208,7 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         # query_space_loss = query_space_loss
         # loss = metric_forward(masked_mae, [prediction_rescaled,real_value_rescaled])
         # update model parameters
+        print(query_space_loss.item())
         optimizer.zero_grad()
         query_space_loss.backward()
         optimizer.step()
