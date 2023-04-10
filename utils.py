@@ -1,6 +1,6 @@
 import math
 import torch
-# from torch_geometric.utils import negative_sampling,structured_negative_sampling,to_dense_adj,dense_to_sparse,to_torch_coo_tensor,to_torch_csr_tensor,to_torch_csc_tensor
+from torch_geometric.utils import negative_sampling,structured_negative_sampling,to_dense_adj,dense_to_sparse
 import numpy as np
 import random
 def data_preprocessing(dataset,args):
@@ -88,3 +88,17 @@ class edge_index_transform(object):
         pos_edge_index = edge_index[:,perm]
         neg_edge_index = negative_edge_index[:,perm]
         return pos_edge_index,neg_edge_index
+    
+        # for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
+        #     support_space_loss = compute_space_loss(preds, pos_sup_edge_index, neg_sup_edge_index)
+        #     # print(support_space_loss)
+        #     learner.adapt(support_space_loss, allow_unused=True, allow_nograd = True)
+        #     query_space_loss += compute_space_loss(preds, pos_que_edge_index, neg_que_edge_index)
+        # for _ in range(adapt_steps): # adaptation_steps
+        #     support_preds = learner(x_support)
+        #     support_loss=lossfn(support_preds, y_support)
+        #     learner.adapt(support_loss)
+
+        #     query_preds = learner(x_query)
+        #     query_loss = lossfn(query_preds, y_query)
+        #     meta_train_loss += query_loss

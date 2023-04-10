@@ -26,13 +26,16 @@ from MLP_arch import MultiLayerPerceptron
 from gwnet_arch import GraphWaveNet
 import learn2learn as l2l
 from utils import edge_index_transform
+from collections import OrderedDict
 # from torch_geometric.utils import negative_sampling,structured_negative_sampling,to_dense_adj,dense_to_sparse,to_torch_coo_tensor,to_torch_csr_tensor,to_torch_csc_tensor
 def compute_space_loss(embedding, pos_edge_index,neg_edge_index):
     # embedding = torch.relu(embedding)
     criterion_space = nn.BCEWithLogitsLoss()
 
-    pos_score = torch.sum(embedding[pos_edge_index[0]] * embedding[pos_edge_index[1]], dim=1)
-    neg_score = torch.sum(embedding[neg_edge_index[0]] * embedding[neg_edge_index[1]], dim=1)
+    pos_score = torch.sum(embedding[pos_edge_index[:][:][0]] * embedding[pos_edge_index[:][:][1]], dim=2)
+    neg_score = torch.sum(embedding[neg_edge_index[:][:][0]] * embedding[neg_edge_index[:][:][1]], dim=2)
+    print(pos_score.shape)
+    dd
     loss = criterion_space(pos_score, torch.ones_like(pos_score)) + \
            criterion_space(neg_score, torch.zeros_like(neg_score))
     return loss
@@ -127,55 +130,59 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
     metrics = {"MAE": masked_mae, "RMSE": masked_rmse, "MAPE": masked_mape}
     prediction = []
     real_value = []
-    batch_size = config['Train']['DATA_BATCH_SIZE']
+    batch_size = config['TRAIN']['DATA_BATCH_SIZE']
     for data in tqdm(train_data_loader):
-        learner = maml.clone()
+        # learner = maml.clone()
 
 
         query_space_loss = 0.0
         
         future_data = data[0].to(device)
         history_data = data[1].to(device)
-        edge_index_set = data[2].to(device)
+        pos_sup_edge_index = data[2].to(device)
+        neg_sup_edge_index = data[3].to(device)
+        pos_que_edge_index = data[4].to(device)
+        neg_que_edge_index = data[5].to(device)
+
         preds = model(history_data,future_data,32,1,True)
 
         preds = preds[:, :, :, config["MODEL"]["FROWARD_FEATURES"]]
         labels = future_data[:, :, :, config["MODEL"]["TARGET_FEATURES"]]
         prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
         real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
-        pos_sup_edge_index = edge_index_set['pos_sup_edge_index']
-        neg_sup_edge_index = edge_index_set['pos_sup_edge_index']
-        pos_que_edge_index = edge_index_set['pos_que_edge_index']
-        neg_que_edge_index = edge_index_set['neg_que_edge_index']
-        # for i in range(batch_size):
-            
-        for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-            support_space_loss = compute_space_loss(preds, pos_sup_edge_index, neg_sup_edge_index)
-            # print(support_space_loss)
-            learner.adapt(support_space_loss, allow_unused=True, allow_nograd = True)
-            query_space_loss += compute_space_loss(preds, pos_que_edge_index, neg_que_edge_index)
-        # for _ in range(adapt_steps): # adaptation_steps
-        #     support_preds = learner(x_support)
-        #     support_loss=lossfn(support_preds, y_support)
-        #     learner.adapt(support_loss)
 
-        #     query_preds = learner(x_query)
-        #     query_loss = lossfn(query_preds, y_query)
-        #     meta_train_loss += query_loss
+        # print('pos_sup_edge_index')
+        # print(pos_sup_edge_index[:][:][0].shape)
+        # print(neg_sup_edge_index.shape)
+        # print(pos_que_edge_index.shape)
+        # print(neg_que_edge_index.shape)
+        # dd
+        # for i in range(batch_size):
+        fast_weights = OrderedDict(model.named_parameters())
+
+        for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step compute support loss
+            support_space_loss = compute_space_loss(preds, pos_sup_edge_index, neg_sup_edge_index)
+            gradients = torch.autograd.grad(support_space_loss, fast_weights.values(), create_graph=True)
+            fast_weights = OrderedDict(
+                    (name, param - config['OPTIM']['ADAPT_LR'] * grad)
+                    for ((name, param), grad) in zip(fast_weights.items(), gradients)
+                )
+            query_space_loss += compute_space_loss(preds, pos_que_edge_index, neg_que_edge_index) # compute query loss
 
         query_space_loss = query_space_loss/batch_size
         # loss = metric_forward(masked_mae, [prediction_rescaled,real_value_rescaled])
+        # update model parameters
         optimizer.zero_grad()
         query_space_loss.backward()
         optimizer.step()
 
         prediction.append(prediction_rescaled.detach().cpu())        # preds = forward_return[0]
         real_value.append(real_value_rescaled.detach().cpu())        # testy = forward_return[1]
-
-    prediction = torch.cat(prediction, dim=0)
+    # prediction 
+    prediction = torch.cat(prediction, dim=0) 
     real_value = torch.cat(real_value, dim=0)
     # re-scale data
-
+    # compute train metrics
     metric_results = {}
     for metric_name, metric_func in metrics.items():
         metric_item = metric_forward(metric_func, [prediction, real_value])
