@@ -128,40 +128,15 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
     prediction = []
     real_value = []
     
-    for data in tqdm(train_data_loader):
-        learner = maml.clone()
-
-
-        query_space_loss = 0.0
-        
+    for data in tqdm(train_data_loader):        
         future_data = data[0].to(device)
         history_data = data[1].to(device)
-        edge_index_set = data[2].to(device)
         preds = model(history_data,future_data,32,1,True)
 
         preds = preds[:, :, :, config["MODEL"]["FROWARD_FEATURES"]]
         labels = future_data[:, :, :, config["MODEL"]["TARGET_FEATURES"]]
         prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
         real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
-        pos_sup_edge_index = edge_index_set['pos_sup_edge_index']
-        neg_sup_edge_index = edge_index_set['pos_sup_edge_index']
-        pos_que_edge_index = edge_index_set['pos_que_edge_index']
-        neg_que_edge_index = edge_index_set['neg_que_edge_index']
-        for i in range(1): #args.update_sapce_step
-            support_space_loss = compute_space_loss(preds, pos_sup_edge_index, neg_sup_edge_index)
-            # print(support_space_loss)
-            learner.adapt(support_space_loss, allow_unused=True, allow_nograd = True)
-            query_space_loss += compute_space_loss(preds,pos_que_edge_index,neg_que_edge_index)
-        # for _ in range(adapt_steps): # adaptation_steps
-        #     support_preds = learner(x_support)
-        #     support_loss=lossfn(support_preds, y_support)
-        #     learner.adapt(support_loss)
-
-        #     query_preds = learner(x_query)
-        #     query_loss = lossfn(query_preds, y_query)
-        #     meta_train_loss += query_loss
-
-        
         loss = metric_forward(masked_mae, [prediction_rescaled,real_value_rescaled])
         optimizer.zero_grad()
         loss.backward()
@@ -220,8 +195,7 @@ def main(config):
     # model.load_state_dict(torch.load(config['GENERAL']['MODEL_SAVE_PATH']+'5/STGCN.pt'))
     model.to(device)
     # 定义优化器
-    # torch.load()
-    # model = SineModel(dim=hidden_dim)
+
     maml = l2l.algorithms.MAML(model, lr=config['OPTIM']['ADAPT_LR'], first_order=False, allow_unused=True)
     # optimizer = optim.Adam(maml.parameters(), config['OPTIM']['META_LR'])
     optimizer = optim.Adam(model.parameters(), lr=config['OPTIM']['LR'], weight_decay=1.0e-5,eps=1.0e-8)
@@ -268,10 +242,7 @@ if __name__ == "__main__":
     device = torch.device("cuda:" + str(args.device)) if torch.cuda.is_available() else torch.device("cpu")
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(0)
-    config['device'] = device
-    print(config['device'])
-    print(config['OPTIM']['LR'])
-    # dd
+    print(config)
     main(config)
 
 

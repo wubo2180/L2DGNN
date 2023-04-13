@@ -2,24 +2,24 @@
 GENERAL:
     DESCRIPTION: 'STGCN model configuration'
     MODEL_NAME: 'STGCN'
-    DATASET_NAME : "METR-LA"
+    DATASET_NAME : "PEMS04"
     DATASET_TYPE : "Traffic speed"
     DATASET_INPUT_LEN : 12
     DATASET_OUTPUT_LEN : 12
     GPU_NUM : 1
-    DEVICE: ''
-    DATASET_DIR: 'datasets/METR-LA/data_in12_out12.pkl'
-    DATASET_INDEX_DIR: 'datasets/METR-LA/index_in12_out12.pkl'
-    SCALER_DIR: 'datasets/METR-LA/scaler_in12_out12.pkl'
-    ADJ_DIR: "datasets/METR-LA/adj_mx.pkl"
-    MODEL_SAVE_PATH: 'checkpoints/METR-LA/'
+    DEVICE: '0'
+    DATASET_DIR: 'datasets/PEMS04/data_in12_out12.pkl'
+    DATASET_INDEX_DIR: 'datasets/PEMS04/index_in12_out12.pkl'
+    SCALER_DIR: 'datasets/PEMS04/scaler_in12_out12.pkl'
+    ADJ_DIR: "datasets/PEMS04/adj_mx.pkl"
+    MODEL_SAVE_PATH: 'checkpoints/PEMS04/'
 # ============ optim ============ #
 # PEMS-BAY METR-LA PEMS04 PEMS08 PEMS03
 OPTIM:
     LR: 0.002
     MOMENTUM: 0.9
     ADAPT_LR: 0.01
-    META_LR: 0.01
+    META_LR: 0.001
 METRICS: {"MAE": masked_mae, "RMSE": masked_rmse, "MAPE": masked_mape}
 
 # ============ META  ============ #
@@ -58,7 +58,7 @@ TRAIN:
     EPOCHS: 100
     NULL_VAL : 0.0
 # read data
-    DATA_DIR : "datasets/METR-LA"
+    DATA_DIR : "datasets/PEMS04"
 # dataloader args, optional
     DATA_BATCH_SIZE : 32
     DATA_PREFETCH : False
@@ -72,7 +72,7 @@ VAL:
 # validating data
     DATA : EasyDict()
 # read data
-    DATA_DIR : "datasets/METR-LA"
+    DATA_DIR : "datasets/PEMS04"
 # dataloader args, optional
     DATA_BATCH_SIZE : 32
     DATA_PREFETCH : False
@@ -87,7 +87,7 @@ TEST:
 # test data
     
 # read data
-    DATA_DIR : "datasets/METR-LA"
+    DATA_DIR : "datasets/PEMS04"
 # dataloader args, optional
     DATA_BATCH_SIZE : 32
     DATA_PREFETCH : False

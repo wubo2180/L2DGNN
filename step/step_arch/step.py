@@ -59,7 +59,7 @@ class STEP(nn.Module):
 
         # discrete graph learning & feed forward of TSFormer
         bernoulli_unnorm, hidden_states, adj_knn, sampled_adj = self.discrete_graph_learning(long_term_history, self.tsformer)
-
+        print(adj_knn.shape)
         # enhancing downstream STGNNs
         hidden_states = hidden_states[:, :, -1, :]
         y_hat = self.backend(short_term_history, hidden_states=hidden_states, sampled_adj=sampled_adj).transpose(1, 2)
