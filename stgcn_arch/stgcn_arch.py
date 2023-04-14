@@ -48,6 +48,8 @@ class STGCNChebGraphConv(nn.Module):
         self.output = OutputBlock(
             Ko, blocks[-3][-1], blocks[-2], blocks[-1][0], n_vertex, act_func, bias, droprate)
 
+        # self.mlp = nn.Linear(12,100)
+
     def forward(self, history_data: torch.Tensor, future_data: torch.Tensor, batch_seen: int, epoch: int, train: bool, **kwargs) -> torch.Tensor:
         """feedforward function of STGCN.
 
@@ -63,6 +65,7 @@ class STGCNChebGraphConv(nn.Module):
 
         x = self.st_blocks(x)
         x = self.output(x)
+
         # print(x.shape)
         x = x.transpose(2, 3)
         # dd

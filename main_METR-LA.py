@@ -27,29 +27,30 @@ from gwnet_arch import GraphWaveNet
 import learn2learn as l2l
 from utils import edge_index_transform
 from collections import OrderedDict
-criterion_space = nn.BCEWithLogitsLoss()
+from torch_geometric_temporal.nn.attention import STConv
 # from torch_geometric.utils import negative_sampling,structured_negative_sampling,to_dense_adj,dense_to_sparse,to_torch_coo_tensor,to_torch_csr_tensor,to_torch_csc_tensor
-def compute_space_loss(embedding, pos_edge_index,neg_edge_index):
-    # embedding shape B L N C 
+# def compute_space_loss(embedding, pos_edge_index,neg_edge_index):
+#     # embedding shape B L N C 
     
     
-    B, L, N, C = embedding.shape
-    loss = 0.0
-    for i in range(B):
-        for j in range(L):
-            pos_src_node_index = pos_edge_index[i][j][0]
-            pos_tar_node_index = pos_edge_index[i][j][1]
-            neg_src_node_index = neg_edge_index[i][j][0]
-            neg_tar_node_index = neg_edge_index[i][j][1]
-            # print(pos_src_node_index.shape)
-            # print(embedding[i][j][pos_src_node_index].shape)
-            # print(embedding[i][j][pos_src_node_index].shape)
-            # dd
-            pos_score = torch.sum(embedding[i][j][pos_src_node_index] * embedding[i][j][pos_tar_node_index], dim=1)
-            neg_score = torch.sum(embedding[i][j][neg_src_node_index] * embedding[i][j][neg_tar_node_index], dim=1)
+#     B, L, N, C = embedding.shape
+#     embedding = embedding.transpose(1,2).reshape((B,N,-1))
+#     loss = 0.0
+#     for i in range(B):
+#         for j in range(L):
+#             pos_src_node_index = pos_edge_index[i][j][0]
+#             pos_tar_node_index = pos_edge_index[i][j][1]
+#             neg_src_node_index = neg_edge_index[i][j][0]
+#             neg_tar_node_index = neg_edge_index[i][j][1]
+#             # print(pos_src_node_index.shape)
+#             # print(embedding[i][j][pos_src_node_index].shape)
+#             # print(embedding[i][j][pos_src_node_index].shape)
+#             # dd
+#             pos_score = torch.sum(embedding[i][j][pos_src_node_index] * embedding[i][j][pos_tar_node_index], dim=1)
+#             neg_score = torch.sum(embedding[i][j][neg_src_node_index] * embedding[i][j][neg_tar_node_index], dim=1)
             
-            loss += criterion_space(pos_score, torch.ones_like(pos_score)) + \
-           criterion_space(neg_score, torch.zeros_like(neg_score))
+#             loss += criterion_space(pos_score, torch.ones_like(pos_score)) + \
+#            criterion_space(neg_score, torch.zeros_like(neg_score))
             # print(pos_score.shape)
     #         print(loss)
     #         # dd
@@ -59,7 +60,31 @@ def compute_space_loss(embedding, pos_edge_index,neg_edge_index):
     # print(L)
     # print(loss/(B * L))
     # dd
-    return loss/(B * L)
+    # return loss/(B * L)
+def compute_space_loss(embedding, pos_edge_index,neg_edge_index):
+    # embedding shape B L N C 
+    criterion_space = nn.BCEWithLogitsLoss()
+    
+    B, L, N, C = embedding.shape
+    # embedding = embedding.transpose(1,2).reshape((B,N,-1))
+    embedding = embedding[:,0,:].squeeze(1)
+    B, _ , E = pos_edge_index.shape
+    loss = 0.0
+    for i in range(B):
+        pos_src_node_index = pos_edge_index[i,0,:].flatten()
+        pos_tar_node_index = pos_edge_index[i,1,:].flatten()
+        neg_src_node_index = neg_edge_index[i,0,:].flatten()
+        neg_tar_node_index = neg_edge_index[i,1,:].flatten()
+    # print(pos_src_node_index.shape)
+    # print(embedding[i][j][pos_src_node_index].shape)
+    # print(embedding[i][j][pos_src_node_index].shape)
+    # dd
+        pos_score = torch.sum(embedding[i][pos_src_node_index] * embedding[i][pos_tar_node_index], dim=1)
+        neg_score = torch.sum(embedding[i][neg_src_node_index] * embedding[i][neg_tar_node_index], dim=1)
+            
+        loss += criterion_space(pos_score, torch.ones_like(pos_score)) + \
+                criterion_space(neg_score, torch.zeros_like(neg_score))
+    return loss/B
 def compute_temporal_loss(embedding, pos_edge_index,neg_edge_index,real_value_rescaled):
     embedding_list = []
     real_value_list = []
@@ -284,17 +309,18 @@ def main(config):
     print(len(train_dataset))
     print(len(val_dataset))
     print(len(test_dataset))
- 
-    train_data_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_data_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
-    test_data_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-    model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
-                config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
-                config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
-                config['MODEL']['STGCN']['droprate'])
+    train_data_loader = DataLoader(train_dataset, batch_size=config['TRAIN']['DATA_BATCH_SIZE'], shuffle=True)
+    val_data_loader = DataLoader(val_dataset, batch_size=config['VAL']['DATA_BATCH_SIZE'], shuffle=False)
+    test_data_loader = DataLoader(test_dataset, batch_size=config['TEST']['DATA_BATCH_SIZE'], shuffle=False)
+
+    # model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
+    #             config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
+    #             config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
+    #             config['MODEL']['STGCN']['droprate'])
     # model = MultiLayerPerceptron(12,12,32)
     # model = GraphWaveNet(config['MODEL']['STGCN']['n_vertex'],in_dim=3)
+    
     # print(net)
     # model.load_state_dict(torch.load(config['GENERAL']['MODEL_SAVE_PATH']+'5/STGCN.pt'))
     print(config['GENERAL']['DEVICE'])

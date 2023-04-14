@@ -29,7 +29,7 @@ class TimeSeriesForecastingDataset(Dataset):
         # dd
         self.pos_sup_edge_index, self.neg_sup_edge_index, self.pos_que_edge_index, self.neg_que_edge_index = self.create_edge_index(self.index[-1][-1])
         # print('###')
-        
+        # print(self.index)
         # dd
 
     def _check_if_file_exists(self, data_file_path: str, index_file_path: str):
@@ -76,10 +76,10 @@ class TimeSeriesForecastingDataset(Dataset):
             future_data = self.data[idx[1], idx[2]]
         # 
         # print(idx)
-        pos_sup_edge_index = self.pos_sup_edge_index[idx[0]:idx[1]]
-        neg_sup_edge_index = self.neg_sup_edge_index[idx[0]:idx[1]]
-        pos_que_edge_index = self.pos_que_edge_index[idx[0]:idx[1]]
-        neg_que_edge_index = self.neg_que_edge_index[idx[0]:idx[1]]
+        pos_sup_edge_index = self.pos_sup_edge_index[idx[0]]
+        neg_sup_edge_index = self.neg_sup_edge_index[idx[0]]
+        pos_que_edge_index = self.pos_que_edge_index[idx[0]]
+        neg_que_edge_index = self.neg_que_edge_index[idx[0]]
         # print(pos_sup_edge_index.shape)
         # print(neg_sup_edge_index.shape)
         # print(pos_que_edge_index.shape)
