@@ -106,45 +106,60 @@ def compute_temporal_loss(embedding, pos_edge_index,neg_edge_index,real_value_re
     # print(loss.item())
     # dd
     return loss
-def compute_long_temporal_loss(embedding, pos_edge_index,neg_edge_index,real_value_rescaled):
-    embedding_list = []
-    real_value_list = []
-    B,  _, E = pos_edge_index.shape
-    B, L, N, C = embedding.shape
-    embedding = embedding.transpose(2,1).reshape((B,N,-1))
-    # print(embedding.shape)
-    # dd
-    loss = 0.0
-    print(pos_edge_index[0])
-    dd
-    for i in range(B):
+def compute_long_temporal_loss(prediction_rescaled, real_value_rescaled, timespan):
+    # print(prediction_rescaled.shape)
+    # print(prediction_rescaled)
+    L, N, C  = prediction_rescaled.shape
+    prediction_rescaled = prediction_rescaled.permute(1,0,2).reshape((N,L))
+    # prediction_rescaled = prediction_rescaled.mean(dim = 1)
+    
+    real_value_rescaled  = real_value_rescaled.permute(1,0,2).reshape((N,L))
+    # real_value_rescaled = real_value_rescaled.mean(dim = 1)
+    # print(real_value_rescaled.shape)
+    # print(real_value_rescaled[timespan].shape)
+    # print(real_value_rescaled[timespan])
+    # print()
+    loss = metric_forward (masked_mae, [prediction_rescaled[timespan], real_value_rescaled[timespan]])
+    return loss
+# def compute_long_temporal_loss(embedding, pos_edge_index,neg_edge_index,real_value_rescaled):
+#     embedding_list = []
+#     real_value_list = []
+#     B,  _, E = pos_edge_index.shape
+#     B, L, N, C = embedding.shape
+#     embedding = embedding.transpose(2,1).reshape((B,N,-1))
+#     # print(embedding.shape)
+#     # dd
+#     loss = 0.0
+#     print(pos_edge_index[0])
+#     dd
+#     for i in range(B):
 
-        pos_src_node_index = pos_edge_index[i][0]
-        # print(pos_src_node_index.shape)
-        # pos_tar_node_index = pos_edge_index[i][j][1]
-        # neg_src_node_index = neg_edge_index[i][j][0]
-        # neg_tar_node_index = neg_edge_index[i][j][1]
-        embedding_list.append(embedding[i][pos_src_node_index])
-        real_value_list.append(real_value_rescaled[i][pos_src_node_index])
-        print(embedding[i].shape)
-        print(embedding[i][pos_src_node_index].shape)
-        print(embedding[i][pos_src_node_index][:][:])
+#         pos_src_node_index = pos_edge_index[i][0]
+#         # print(pos_src_node_index.shape)
+#         # pos_tar_node_index = pos_edge_index[i][j][1]
+#         # neg_src_node_index = neg_edge_index[i][j][0]
+#         # neg_tar_node_index = neg_edge_index[i][j][1]
+#         embedding_list.append(embedding[i][pos_src_node_index])
+#         real_value_list.append(real_value_rescaled[i][pos_src_node_index])
+#         print(embedding[i].shape)
+#         print(embedding[i][pos_src_node_index].shape)
+#         print(embedding[i][pos_src_node_index][:][:])
         
-        dd
-    # print(torch.stack(embedding_list).shape)
-    # dd
-    embedding_list = torch.stack(embedding_list).reshape((B,E,-1)).mean(dim=2)
+#         dd
+#     # print(torch.stack(embedding_list).shape)
+#     # dd
+#     embedding_list = torch.stack(embedding_list).reshape((B,E,-1)).mean(dim=2)
 
-    real_value_list = torch.stack(real_value_list).reshape((B, E,-1)).mean(dim=2)
+#     real_value_list = torch.stack(real_value_list).reshape((B, E,-1)).mean(dim=2)
 
-    loss = metric_forward (masked_mae, [embedding_list, real_value_list])
-    # print(loss.item())
-    # dd
-    print(embedding_list.shape)
-    print(real_value_list.shape)
-    print(loss.item())
-    dd
-    return loss/B
+#     loss = metric_forward (masked_mae, [embedding_list, real_value_list])
+#     # print(loss.item())
+#     # dd
+#     print(embedding_list.shape)
+#     print(real_value_list.shape)
+#     print(loss.item())
+#     dd
+#     return loss/B
 def metric_forward(metric_func, args):
     """Computing metrics.
 
@@ -243,6 +258,8 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
     for idx, data in enumerate(tqdm(train_data_loader)):
         # if idx>10:
         #     break
+        # if idx <749:
+        #     continue
         learner = maml.clone()
 
 
@@ -268,23 +285,35 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         # print(prediction_rescaled.shape)
         # dd
         # for i in range(batch_size):
-            
-        for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-            support_space_loss = compute_space_loss(prediction_rescaled, pos_sup_edge_index, neg_sup_edge_index)
-            # print(support_space_loss.item())
-            learner.adapt(support_space_loss)
-        query_space_loss = compute_space_loss(prediction_rescaled, pos_que_edge_index, neg_que_edge_index)
-        # for i in range(num_nodes):
-        #     for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-        #         support_temporal_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,index_list[i],:], real_value_rescaled[:,:,index_list[i],:]])
-        #         # print(support_space_loss.item())
-        #         learner.adapt(support_temporal_loss)
-        #     query_temporal_loss += metric_forward (masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
-        # query_temporal_loss = query_temporal_loss/num_nodes
+        
+        for i in range(num_nodes):
+            for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
+                support_temporal_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,index_list[i],:], real_value_rescaled[:,:,index_list[i],:]])
+                # print(support_space_loss.item())
+                learner.adapt(support_temporal_loss)
+            query_temporal_loss += metric_forward (masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
+        query_temporal_loss = query_temporal_loss/num_nodes
         # loss += query_temporal_loss
+        # for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
+        #     support_space_loss = compute_space_loss(prediction_rescaled, pos_sup_edge_index, neg_sup_edge_index)
+        #     # print(support_space_loss.item())
+        #     learner.adapt(support_space_loss)
+        # query_space_loss = compute_space_loss(prediction_rescaled, pos_que_edge_index, neg_que_edge_index)
+        
+        # for i in range(prediction_rescaled.shape[0]):
+        #     for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
+        #         # print(batch_size)
+        #         # print(prediction_rescaled.shape)
+        #         support_long_temporal_loss = compute_long_temporal_loss(prediction_rescaled[i], real_value_rescaled[i], range(20))
+        #         # print(support_long_temporal_loss.item())
+        #         # dd
+        #         learner.adapt(support_long_temporal_loss)
+        #     query_long_temporal_loss = compute_long_temporal_loss(prediction_rescaled[i], real_value_rescaled[i],range(20,40))
+        # query_long_temporal_loss = query_long_temporal_loss/batch_size
+        # loss += query_long_temporal_loss
         
         optimizer.zero_grad()
-        query_space_loss.backward()
+        query_temporal_loss.backward()
         optimizer.step()
         # for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
         #     support_temporal_loss = compute_temporal_loss(prediction_rescaled, pos_sup_edge_index, neg_sup_edge_index,real_value_rescaled )
@@ -381,7 +410,7 @@ def main(config):
     # model = SineModel(dim=hidden_dim)
     # maml = 1
     maml = l2l.algorithms.MAML(model, lr=config['OPTIM']['ADAPT_LR'], first_order=False, allow_unused=True)
-    optimizer = optim.Adam(maml.parameters(), config['OPTIM']['META_LR'])
+    optimizer = optim.Adam(maml.parameters(), config['OPTIM']['META_LR'], weight_decay=1.0e-5,eps=1.0e-8)
     # optimizer = optim.Adam(model.parameters(), lr=config['OPTIM']['LR'], weight_decay=1.0e-5,eps=1.0e-8)
     print(optimizer)
     # dd
@@ -407,7 +436,7 @@ if __name__ == "__main__":
                         help='Batch size for training')
     parser.add_argument('--lr', default=0.01, type=float,
                         help='Learning rate')
-    parser.add_argument('--device', default=1, type=int,
+    parser.add_argument('--device', default=0, type=int,
                         help='device')
     args = parser.parse_args()
 
