@@ -106,6 +106,45 @@ def compute_temporal_loss(embedding, pos_edge_index,neg_edge_index,real_value_re
     # print(loss.item())
     # dd
     return loss
+def compute_long_temporal_loss(embedding, pos_edge_index,neg_edge_index,real_value_rescaled):
+    embedding_list = []
+    real_value_list = []
+    B,  _, E = pos_edge_index.shape
+    B, L, N, C = embedding.shape
+    embedding = embedding.transpose(2,1).reshape((B,N,-1))
+    # print(embedding.shape)
+    # dd
+    loss = 0.0
+    print(pos_edge_index[0])
+    dd
+    for i in range(B):
+
+        pos_src_node_index = pos_edge_index[i][0]
+        # print(pos_src_node_index.shape)
+        # pos_tar_node_index = pos_edge_index[i][j][1]
+        # neg_src_node_index = neg_edge_index[i][j][0]
+        # neg_tar_node_index = neg_edge_index[i][j][1]
+        embedding_list.append(embedding[i][pos_src_node_index])
+        real_value_list.append(real_value_rescaled[i][pos_src_node_index])
+        print(embedding[i].shape)
+        print(embedding[i][pos_src_node_index].shape)
+        print(embedding[i][pos_src_node_index][:][:])
+        
+        dd
+    # print(torch.stack(embedding_list).shape)
+    # dd
+    embedding_list = torch.stack(embedding_list).reshape((B,E,-1)).mean(dim=2)
+
+    real_value_list = torch.stack(real_value_list).reshape((B, E,-1)).mean(dim=2)
+
+    loss = metric_forward (masked_mae, [embedding_list, real_value_list])
+    # print(loss.item())
+    # dd
+    print(embedding_list.shape)
+    print(real_value_list.shape)
+    print(loss.item())
+    dd
+    return loss/B
 def metric_forward(metric_func, args):
     """Computing metrics.
 
@@ -314,10 +353,10 @@ def main(config):
     val_data_loader = DataLoader(val_dataset, batch_size=config['VAL']['DATA_BATCH_SIZE'], shuffle=False)
     test_data_loader = DataLoader(test_dataset, batch_size=config['TEST']['DATA_BATCH_SIZE'], shuffle=False)
 
-    # model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
-    #             config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
-    #             config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
-    #             config['MODEL']['STGCN']['droprate'])
+    model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
+                config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
+                config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
+                config['MODEL']['STGCN']['droprate'])
     # model = MultiLayerPerceptron(12,12,32)
     # model = GraphWaveNet(config['MODEL']['STGCN']['n_vertex'],in_dim=3)
     
