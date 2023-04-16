@@ -197,7 +197,9 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
     metrics = {"MAE": masked_mae, "RMSE": masked_rmse, "MAPE": masked_mape}
     prediction = []
     real_value = []
+    device = config['GENERAL']['DEVICE']
     batch_size = config['TRAIN']['DATA_BATCH_SIZE']
+    num_nodes = config['GENERAL']['NUM_NODE']
     loss = 0.0
     for idx, data in enumerate(tqdm(train_data_loader)):
         # if idx>10:
@@ -207,12 +209,13 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
 
         query_space_loss = 0.0
         query_temporal_loss = 0.0
-        future_data = data[0].to(config['GENERAL']['DEVICE'])
-        history_data = data[1].to(config['GENERAL']['DEVICE'])
-        pos_sup_edge_index = data[2].to(config['GENERAL']['DEVICE'])
-        neg_sup_edge_index = data[3].to(config['GENERAL']['DEVICE'])
-        pos_que_edge_index = data[4].to(config['GENERAL']['DEVICE'])
-        neg_que_edge_index = data[5].to(config['GENERAL']['DEVICE'])
+        future_data = data[0].to(device)
+        history_data = data[1].to(device)
+        pos_sup_edge_index = data[2].to(device)
+        neg_sup_edge_index = data[3].to(device)
+        pos_que_edge_index = data[4].to(device)
+        neg_que_edge_index = data[5].to(device)
+        index_list = data[6]
         # print(pos_sup_edge_index.shape)
         # print(neg_sup_edge_index.shape)
         # print(pos_que_edge_index.shape)
@@ -231,18 +234,30 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
             support_space_loss = compute_space_loss(prediction_rescaled, pos_sup_edge_index, neg_sup_edge_index)
             # print(support_space_loss.item())
             learner.adapt(support_space_loss)
-            query_space_loss += compute_space_loss(prediction_rescaled, pos_que_edge_index, neg_que_edge_index)
+        query_space_loss = compute_space_loss(prediction_rescaled, pos_que_edge_index, neg_que_edge_index)
+        # for i in range(num_nodes):
+        #     for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
+        #         support_temporal_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,index_list[i],:], real_value_rescaled[:,:,index_list[i],:]])
+        #         # print(support_space_loss.item())
+        #         learner.adapt(support_temporal_loss)
+        #     query_temporal_loss += metric_forward (masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
+        # query_temporal_loss = query_temporal_loss/num_nodes
+        # loss += query_temporal_loss
+        
+        optimizer.zero_grad()
+        query_space_loss.backward()
+        optimizer.step()
         # for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
         #     support_temporal_loss = compute_temporal_loss(prediction_rescaled, pos_sup_edge_index, neg_sup_edge_index,real_value_rescaled )
         #     # print(support_space_loss.item())
         #     learner.adapt(support_temporal_loss)
         #     query_temporal_loss += compute_temporal_loss(prediction_rescaled, pos_que_edge_index, neg_que_edge_index, real_value_rescaled)
-        loss +=query_space_loss.item()
+        # loss +=query_space_loss.item()
         # for _ in range(adapt_steps): # adaptation_steps
         #     support_preds = learner(x_support)
         #     support_loss=lossfn(support_preds, y_support)
         #     learner.adapt(support_loss)
-
+        
         # print('pos_sup_edge_index')
         # print(pos_sup_edge_index[:][:][0].shape)
         # print(neg_sup_edge_index.shape)
@@ -267,12 +282,11 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         # loss = metric_forward(masked_mae, [prediction_rescaled,real_value_rescaled])
         # update model parameters
         # print(query_space_loss.item())
-        optimizer.zero_grad()
-        query_space_loss.backward()
-        optimizer.step()
+
 
         prediction.append(prediction_rescaled.detach().cpu())        # preds = forward_return[0]
         real_value.append(real_value_rescaled.detach().cpu())        # testy = forward_return[1]
+
     # prediction 
     prediction = torch.cat(prediction, dim=0) 
     real_value = torch.cat(real_value, dim=0)
@@ -290,6 +304,7 @@ def main(config):
     adj_mx, _ = load_adj(config['GENERAL']['ADJ_DIR'], "normlap")
 
     adj_mx = torch.Tensor(adj_mx[0])
+    config['GENERAL']['NUM_NODE'] = adj_mx.shape[0]
     # print(adj_mx)
     config['MODEL']['STGCN']['n_vertex'] = adj_mx.shape[0]
     scaler = load_pkl(config['GENERAL']['SCALER_DIR'])
@@ -298,26 +313,23 @@ def main(config):
     config['MODEL']['STGCN']['gso'] = adj_mx
     # 加载数据集d
     # num_sampled_edges = config['META']['SUPPORT_SET_SIZE'] + config['META']['QUERY_SET_SIZE']
-    train_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'train',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx)
-    
-    
-    # train_dataset[0]
-    # dd
-    val_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'valid',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx)
-    test_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'test',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx)
+    train_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'train',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx,config['GENERAL']['DEVICE'])
+    val_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'valid',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx,config['GENERAL']['DEVICE'])
+    test_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'test',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx,config['GENERAL']['DEVICE'])
 
     print(len(train_dataset))
     print(len(val_dataset))
     print(len(test_dataset))
-
+    # print(train_dataset[0][2].shape)
+    # dd
     train_data_loader = DataLoader(train_dataset, batch_size=config['TRAIN']['DATA_BATCH_SIZE'], shuffle=True)
     val_data_loader = DataLoader(val_dataset, batch_size=config['VAL']['DATA_BATCH_SIZE'], shuffle=False)
     test_data_loader = DataLoader(test_dataset, batch_size=config['TEST']['DATA_BATCH_SIZE'], shuffle=False)
 
-    # model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
-    #             config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
-    #             config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
-    #             config['MODEL']['STGCN']['droprate'])
+    model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
+                config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
+                config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
+                config['MODEL']['STGCN']['droprate'])
     # model = MultiLayerPerceptron(12,12,32)
     # model = GraphWaveNet(config['MODEL']['STGCN']['n_vertex'],in_dim=3)
     
@@ -356,7 +368,7 @@ if __name__ == "__main__":
                         help='Batch size for training')
     parser.add_argument('--lr', default=0.01, type=float,
                         help='Learning rate')
-    parser.add_argument('--device', default=0, type=int,
+    parser.add_argument('--device', default=1, type=int,
                         help='device')
     args = parser.parse_args()
 

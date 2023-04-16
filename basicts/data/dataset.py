@@ -11,7 +11,7 @@ import math
 class TimeSeriesForecastingDataset(Dataset):
     """Time series forecasting dataset."""
 
-    def __init__(self, data_file_path: str, index_file_path: str, mode: str,support_set_size, query_set_size, adj_mx) -> None:
+    def __init__(self, data_file_path: str, index_file_path: str, mode: str,support_set_size, query_set_size, adj_mx,device) -> None:
         super().__init__()
         assert mode in ["train", "valid", "test"], "error mode"
         self._check_if_file_exists(data_file_path, index_file_path)
@@ -25,12 +25,14 @@ class TimeSeriesForecastingDataset(Dataset):
         self.support_set_size = support_set_size
         self.query_set_size = query_set_size
         self.adj_mx = adj_mx
+        self.device = device
         # print(self.index[-1])
         # dd
         self.pos_sup_edge_index, self.neg_sup_edge_index, self.pos_que_edge_index, self.neg_que_edge_index = self.create_edge_index(self.index[-1][-1])
         # print('###')
         # print(self.index)
         # dd
+        self.neighbor_index = self.create_neighbor_index()
 
     def _check_if_file_exists(self, data_file_path: str, index_file_path: str):
         """Check if data file and index file exist.
@@ -87,7 +89,7 @@ class TimeSeriesForecastingDataset(Dataset):
         
         # print(history_data.shape)
         # return future_data, history_data, pos_edge_index, neg_edge_index
-        return future_data, history_data, pos_sup_edge_index, neg_sup_edge_index, pos_que_edge_index, neg_que_edge_index
+        return future_data, history_data, pos_sup_edge_index, neg_sup_edge_index, pos_que_edge_index, neg_que_edge_index,self.neighbor_index
 
     def __len__(self):
         """Dataset length
@@ -96,7 +98,15 @@ class TimeSeriesForecastingDataset(Dataset):
             int: dataset length
         """
         return len(self.index)
-    
+    def create_neighbor_index(self):
+        self.adj_mx[torch.abs(self.adj_mx)>0] = 1.0
+        index_non_zero = []
+        for i in range(self.adj_mx.shape[0]):
+            self.adj_mx[i][i] = 0.0
+            index_non_zero.append(torch.nonzero(self.adj_mx[i].squeeze().to(self.device)))
+        # self.adj_mx
+        print('test')
+        return index_non_zero
     def create_edge_index(self, length):
         self.adj_mx[torch.abs(self.adj_mx)>0] = 1.0
         edge_index, _ = dense_to_sparse(self.adj_mx.long())
