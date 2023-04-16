@@ -8,9 +8,9 @@ GENERAL:
     DATASET_OUTPUT_LEN : 12
     GPU_NUM : 1
     DEVICE: ''
-    DATASET_DIR: 'datasets/METR-LA/data_in12_out12.pkl'
-    DATASET_INDEX_DIR: 'datasets/METR-LA/index_in12_out12.pkl'
-    SCALER_DIR: 'datasets/METR-LA/scaler_in12_out12.pkl'
+    DATASET_DIR: 'datasets/METR-LA/data_in2016_out12.pkl'
+    DATASET_INDEX_DIR: 'datasets/METR-LA/index_in2016_out12.pkl'
+    SCALER_DIR: 'datasets/METR-LA/scaler_in2016_out12.pkl'
     ADJ_DIR: "datasets/METR-LA/adj_mx.pkl"
     MODEL_SAVE_PATH: 'checkpoints/METR-LA/'
 # ============ optim ============ #
