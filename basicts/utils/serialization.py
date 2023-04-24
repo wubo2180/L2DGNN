@@ -89,6 +89,9 @@ def load_adj(file_path: str, adj_type: str):
     # print(adj_mx)
     # print(np.sum(adj_mx>0))
     # # dd
+    # print(adj_mx)
+    # print(adj_mx.shape)
+    # dd
     if adj_type == "scalap":
         adj = [calculate_scaled_laplacian(adj_mx).astype(np.float32).todense()]
     elif adj_type == "normlap":

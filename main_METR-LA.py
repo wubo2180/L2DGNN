@@ -106,22 +106,29 @@ def compute_temporal_loss(embedding, pos_edge_index,neg_edge_index,real_value_re
     # print(loss.item())
     # dd
     return loss
-def compute_long_temporal_loss(prediction_rescaled, real_value_rescaled, timespan):
+def compute_long_temporal_loss(prediction_rescaled, real_value_rescaled,index_list):
+    timespan = range(20)
     # print(prediction_rescaled.shape)
     # print(prediction_rescaled)
-    L, N, C  = prediction_rescaled.shape
-    prediction_rescaled = prediction_rescaled.permute(1,0,2).reshape((N,L))
-    # prediction_rescaled = prediction_rescaled.mean(dim = 1)
+    B, L, C  = prediction_rescaled.shape
+    prediction_rescaled = prediction_rescaled.squeeze()
+    prediction_rescaled = prediction_rescaled.mean(dim = 1)
     
-    real_value_rescaled  = real_value_rescaled.permute(1,0,2).reshape((N,L))
-    # real_value_rescaled = real_value_rescaled.mean(dim = 1)
+    real_value_rescaled  = real_value_rescaled.squeeze()
+    real_value_rescaled = real_value_rescaled.mean(dim = 1)
     # print(real_value_rescaled.shape)
     # print(real_value_rescaled[timespan].shape)
     # print(real_value_rescaled[timespan])
     # print()
-    loss = metric_forward (masked_mae, [prediction_rescaled[timespan], real_value_rescaled[timespan]])
+    loss = metric_forward (masked_mae, [prediction_rescaled[index_list], real_value_rescaled[index_list]])
     return loss
-# def compute_long_temporal_loss(embedding, pos_edge_index,neg_edge_index,real_value_rescaled):
+def compute_edge_loss(prediction_rescaled,real_value_rescaled, pos_edge_index,neg_edge_index,):
+    N, L, C  = prediction_rescaled.shape
+    # N,  E = pos_edge_index.shape
+
+    loss = metric_forward (masked_mae, [prediction_rescaled[pos_edge_index], real_value_rescaled[pos_edge_index]])
+    return loss
+# def compute_long_temporal_loss(prediction_rescaled, real_value_rescaled, pos_edge_index,neg_edge_index,real_value_rescaled):
 #     embedding_list = []
 #     real_value_list = []
 #     B,  _, E = pos_edge_index.shape
@@ -246,13 +253,20 @@ def test(test_data_loader,model,config,scaler):
 
             print("Evaluate best model on test data for horizon " + \
                 "{:d}, Test MAE: {:.4f}, Test RMSE: {:.4f}, Test MAPE: {:.4f}".format(i+1,metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"]))
+        metric_results = {}
+        for metric_name, metric_func in metrics.items():
+            metric_item = metric_forward(metric_func, [prediction, real_value])
+            metric_results[metric_name] = metric_item.item()
+        print("Evaluate val data" + \
+                    "val MAE: {:.4f}, val RMSE: {:.4f}, val MAPE: {:.4f}".format(metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"]))
 def train(train_data_loader,model,config,scaler,optimizer,maml):
     model.train()
     metrics = {"MAE": masked_mae, "RMSE": masked_rmse, "MAPE": masked_mape}
     prediction = []
     real_value = []
     device = config['GENERAL']['DEVICE']
-    batch_size = config['TRAIN']['DATA_BATCH_SIZE']
+
+    # batch_size = config['TRAIN']['DATA_BATCH_SIZE']
     num_nodes = config['GENERAL']['NUM_NODE']
     loss = 0.0
     for idx, data in enumerate(tqdm(train_data_loader)):
@@ -260,18 +274,31 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         #     break
         # if idx <749:
         #     continue
+        
         learner = maml.clone()
 
 
         query_space_loss = 0.0
         query_temporal_loss = 0.0
+        query_edge_loss = 0.0
+        query_long_temporal_loss = 0.0
         future_data = data[0].to(device)
         history_data = data[1].to(device)
         pos_sup_edge_index = data[2].to(device)
         neg_sup_edge_index = data[3].to(device)
         pos_que_edge_index = data[4].to(device)
         neg_que_edge_index = data[5].to(device)
-        index_list = data[6]
+        neighbor_index = data[6]
+        
+        values,indices  = torch.sort(data[7])
+        
+        k_hop_index = data[8]
+        
+        
+        batch_size = future_data.shape[0]
+        # print(indices[:int(batch_size/2)])
+        # print(batch_size)
+        # dd
         # print(pos_sup_edge_index.shape)
         # print(neg_sup_edge_index.shape)
         # print(pos_que_edge_index.shape)
@@ -284,15 +311,33 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
         # print(prediction_rescaled.shape)
         # dd
-        # for i in range(batch_size):
-        
+        # k hop
         for i in range(num_nodes):
             for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-                support_temporal_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,index_list[i],:], real_value_rescaled[:,:,index_list[i],:]])
+                support_temporal_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,k_hop_index[i],:], real_value_rescaled[:,:,k_hop_index[i],:]])
                 # print(support_space_loss.item())
                 learner.adapt(support_temporal_loss)
             query_temporal_loss += metric_forward (masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
         query_temporal_loss = query_temporal_loss/num_nodes
+        # for i in range(batch_size):
+        #     for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
+        #         # print(pos_sup_edge_index[i][0].shape)
+        #         # print(pos_sup_edge_index[i][1])
+        #         # print(prediction_rescaled[i][:].shape)
+        #         # # print(prediction_rescaled[i][:][pos_sup_edge_index[i][1]])
+        #         # dd
+        #         support_edge_loss = metric_forward (masked_mae, [prediction_rescaled[i,:,pos_sup_edge_index[i][0], :], real_value_rescaled[i,:,pos_sup_edge_index[i][0], :]])
+        #         # print(support_space_loss.item())
+        #         learner.adapt(support_edge_loss)
+        #     query_edge_loss += metric_forward (masked_mae, [prediction_rescaled[i,:,pos_sup_edge_index[i][1], :], real_value_rescaled[i,:,pos_sup_edge_index[i][1], :]])
+        # query_edge_loss = query_edge_loss/batch_size
+        # for i in range(num_nodes):
+        #     for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
+        #         support_temporal_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,neighbor_index[i],:], real_value_rescaled[:,:,neighbor_index[i],:]])
+        #         # print(support_space_loss.item())
+        #         learner.adapt(support_temporal_loss)
+        #     query_temporal_loss += metric_forward (masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
+        # query_temporal_loss = query_temporal_loss/num_nodes
         # loss += query_temporal_loss
         # for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
         #     support_space_loss = compute_space_loss(prediction_rescaled, pos_sup_edge_index, neg_sup_edge_index)
@@ -300,21 +345,22 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         #     learner.adapt(support_space_loss)
         # query_space_loss = compute_space_loss(prediction_rescaled, pos_que_edge_index, neg_que_edge_index)
         
-        # for i in range(prediction_rescaled.shape[0]):
+        # for i in range(num_nodes):
         #     for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
         #         # print(batch_size)
         #         # print(prediction_rescaled.shape)
-        #         support_long_temporal_loss = compute_long_temporal_loss(prediction_rescaled[i], real_value_rescaled[i], range(20))
+        #         support_long_temporal_loss = compute_long_temporal_loss(prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:],indices[:int(batch_size/2)])
         #         # print(support_long_temporal_loss.item())
         #         # dd
         #         learner.adapt(support_long_temporal_loss)
-        #     query_long_temporal_loss = compute_long_temporal_loss(prediction_rescaled[i], real_value_rescaled[i],range(20,40))
-        # query_long_temporal_loss = query_long_temporal_loss/batch_size
+        #     query_long_temporal_loss = compute_long_temporal_loss(prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:],indices[int(batch_size/2):])
+        # query_long_temporal_loss = query_long_temporal_loss/num_nodes
         # loss += query_long_temporal_loss
-        
+        temporal_loss = query_long_temporal_loss+query_temporal_loss+query_edge_loss
         optimizer.zero_grad()
-        query_temporal_loss.backward()
+        temporal_loss.backward()
         optimizer.step()
+        loss += temporal_loss
         # for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
         #     support_temporal_loss = compute_temporal_loss(prediction_rescaled, pos_sup_edge_index, neg_sup_edge_index,real_value_rescaled )
         #     # print(support_space_loss.item())
@@ -369,6 +415,7 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
     print(loss/(idx+1))
     
 def main(config):
+    # adj_orig, _ = load_adj(config['GENERAL']['ADJ_DIR'], "normlap")
     adj_mx, _ = load_adj(config['GENERAL']['ADJ_DIR'], "normlap")
 
     adj_mx = torch.Tensor(adj_mx[0])
@@ -378,7 +425,7 @@ def main(config):
     scaler = load_pkl(config['GENERAL']['SCALER_DIR'])
     # print(dense_to_sparse(adj_mx))
     print('adj_mx',adj_mx.shape)
-    config['MODEL']['STGCN']['gso'] = adj_mx
+    config['MODEL']['STGCN']['gso'] = adj_mx.to(config['GENERAL']['DEVICE'])
     # 加载数据集d
     # num_sampled_edges = config['META']['SUPPORT_SET_SIZE'] + config['META']['QUERY_SET_SIZE']
     train_dataset = PretrainingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'train',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx,config['GENERAL']['DEVICE'])
@@ -404,7 +451,7 @@ def main(config):
     # print(net)
     # model.load_state_dict(torch.load(config['GENERAL']['MODEL_SAVE_PATH']+'5/STGCN.pt'))
     print(config['GENERAL']['DEVICE'])
-    model.to(config['GENERAL']['DEVICE'])
+    model = model.to(config['GENERAL']['DEVICE'])
     # 定义优化器
     # torch.load()
     # model = SineModel(dim=hidden_dim)

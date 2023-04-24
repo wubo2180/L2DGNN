@@ -8,9 +8,9 @@ GENERAL:
     DATASET_OUTPUT_LEN : 12
     GPU_NUM : 1
     DEVICE: ''
-    DATASET_DIR: 'datasets/METR-LA/data_in2016_out12.pkl'
-    DATASET_INDEX_DIR: 'datasets/METR-LA/index_in2016_out12.pkl'
-    SCALER_DIR: 'datasets/METR-LA/scaler_in2016_out12.pkl'
+    DATASET_DIR: 'datasets/METR-LA/data_in12_out12.pkl'
+    DATASET_INDEX_DIR: 'datasets/METR-LA/index_in12_out12.pkl'
+    SCALER_DIR: 'datasets/METR-LA/scaler_in12_out12.pkl'
     ADJ_DIR: "datasets/METR-LA/adj_mx.pkl"
     MODEL_SAVE_PATH: 'checkpoints/METR-LA/'
 # ============ optim ============ #
@@ -43,7 +43,7 @@ MODEL:
         T: 12
         n_vertex: 207
         act_func: 'glu'
-        graph_conv_type: 'cheb_graph_conv'
+        graph_conv_type: 'graph_conv'
         gso: ''
         bias: True
         droprate: 0.5
@@ -74,7 +74,7 @@ VAL:
 # read data
     DATA_DIR : "datasets/METR-LA"
 # dataloader args, optional
-    DATA_BATCH_SIZE : 8
+    DATA_BATCH_SIZE : 32
     DATA_PREFETCH : False
     DATA_SHUFFLE : False
     DATA_NUM_WORKERS : 2
@@ -89,7 +89,7 @@ TEST:
 # read data
     DATA_DIR : "datasets/METR-LA"
 # dataloader args, optional
-    DATA_BATCH_SIZE : 8
+    DATA_BATCH_SIZE : 32
     DATA_PREFETCH : False
     DATA_SHUFFLE : False
     DATA_NUM_WORKERS : 2

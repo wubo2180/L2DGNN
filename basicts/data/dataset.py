@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset
 
 from ..utils import load_pkl
-from torch_geometric.utils import dense_to_sparse,negative_sampling
+from torch_geometric.utils import dense_to_sparse,negative_sampling,k_hop_subgraph
 import random
 import numpy as np
 import math
@@ -33,6 +33,7 @@ class TimeSeriesForecastingDataset(Dataset):
         # print(self.index)
         # dd
         self.neighbor_index = self.create_neighbor_index()
+        self.k_hop_index = self.creat_k_hop_neighbor_index()
 
     def _check_if_file_exists(self, data_file_path: str, index_file_path: str):
         """Check if data file and index file exist.
@@ -78,10 +79,10 @@ class TimeSeriesForecastingDataset(Dataset):
             future_data = self.data[idx[1], idx[2]]
         # 
         # print(idx)
-        pos_sup_edge_index = self.pos_sup_edge_index[idx[0]:idx[1]]
-        neg_sup_edge_index = self.neg_sup_edge_index[idx[0]:idx[1]]
-        pos_que_edge_index = self.pos_que_edge_index[idx[0]:idx[1]]
-        neg_que_edge_index = self.neg_que_edge_index[idx[0]:idx[1]]
+        pos_sup_edge_index = self.pos_sup_edge_index[idx[0]]
+        neg_sup_edge_index = self.neg_sup_edge_index[idx[0]]
+        pos_que_edge_index = self.pos_que_edge_index[idx[0]]
+        neg_que_edge_index = self.neg_que_edge_index[idx[0]]
         # print(pos_sup_edge_index.shape)
         # print(neg_sup_edge_index.shape)
         # print(pos_que_edge_index.shape)
@@ -89,7 +90,7 @@ class TimeSeriesForecastingDataset(Dataset):
         
         # print(history_data.shape)
         # return future_data, history_data, pos_edge_index, neg_edge_index
-        return future_data, history_data, pos_sup_edge_index, neg_sup_edge_index, pos_que_edge_index, neg_que_edge_index,self.neighbor_index
+        return future_data, history_data, pos_sup_edge_index, neg_sup_edge_index, pos_que_edge_index, neg_que_edge_index,self.neighbor_index,index,self.k_hop_index
 
     def __len__(self):
         """Dataset length
@@ -99,14 +100,40 @@ class TimeSeriesForecastingDataset(Dataset):
         """
         return len(self.index)
     def create_neighbor_index(self):
-        self.adj_mx[torch.abs(self.adj_mx)>0] = 1.0
+        adj_mx = self.adj_mx
+        adj_mx[torch.abs(self.adj_mx)>0] = 1.0
         index_non_zero = []
-        for i in range(self.adj_mx.shape[0]):
-            self.adj_mx[i][i] = 0.0
-            index_non_zero.append(torch.nonzero(self.adj_mx[i].squeeze().to(self.device)))
+        for i in range(adj_mx.shape[0]):
+            adj_mx[i][i] = 0.0
+            index_non_zero.append(torch.nonzero(adj_mx[i].squeeze().to(self.device)))
+            # print(torch.nonzero(adj_mx[i].squeeze()))
+            if i>1:
+                break
         # self.adj_mx
-        print('test')
+        # print('test')
+        # print(index_non_zero)
+        # dd
         return index_non_zero
+    def creat_k_hop_neighbor_index(self):
+        adj_mx = self.adj_mx
+        adj_mx[torch.abs(self.adj_mx)>0] = 1.0
+        for i in range(adj_mx.shape[0]):
+            adj_mx[i,i] = 1.0
+        edge_index, _ = dense_to_sparse(adj_mx.long())
+        # print(edge_index[:,:20])
+        # print(edge_index.shape)
+        k_hop_index = []
+        for i in range(adj_mx.shape[0]):
+            subset, k_hop_edge_index, mapping, edge_mask = k_hop_subgraph(i, 2, edge_index)
+            # print(subset.shape)
+            # print(k_hop_edge_index.shape)
+            # subset.remove()
+            # print(subset)
+            if subset.shape == 1: # consider isolated vertex
+                subset = torch.tensor([i,i].long()).to(self.device)
+            k_hop_index.append(subset[:-1].to(self.device)) # remove self node
+        # dd
+        return k_hop_index
     def create_edge_index(self, length):
         self.adj_mx[torch.abs(self.adj_mx)>0] = 1.0
         edge_index, _ = dense_to_sparse(self.adj_mx.long())
