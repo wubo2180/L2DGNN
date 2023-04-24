@@ -17,10 +17,9 @@ from basicts.archs import STGCN
 from basicts.data import TimeSeriesForecastingDataset
 from torch.utils.data import Dataset, DataLoader
 from basicts.utils import load_adj
-from basicts.losses import masked_mae,masked_mape,masked_rmse
-
+from basicts.losses import masked_mae as loss_masked_mae
+from basicts.metrics import masked_mae,masked_mape,masked_rmse
 from basicts.data import SCALER_REGISTRY
-from basicts.utils import load_pkl
 from tqdm import tqdm
 
 import learn2learn as l2l
@@ -313,10 +312,10 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         # k hop
         for i in range(num_nodes):
             for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-                support_temporal_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,k_hop_index[i],:], real_value_rescaled[:,:,k_hop_index[i],:]])
+                support_temporal_loss = metric_forward (loss_masked_mae, [prediction_rescaled[:,:,k_hop_index[i],:], real_value_rescaled[:,:,k_hop_index[i],:]])
                 # print(support_space_loss.item())
                 learner.adapt(support_temporal_loss)
-            query_temporal_loss += metric_forward (masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
+            query_temporal_loss += metric_forward (loss_masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
         query_temporal_loss = query_temporal_loss/num_nodes
         # for i in range(batch_size):
         #     for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
