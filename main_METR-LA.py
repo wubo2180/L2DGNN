@@ -12,6 +12,8 @@ import yaml
 # import argparser
 from argparse import ArgumentParser
 from basicts.archs import STGCN
+from basicts.archs import GraphWaveNet,Linear
+from MLP_arch import MultiLayerPerceptron 
 # from step.step_data import ForecastingDataset
 # from step.step_data import TimeSeriesForecastingDataset
 from basicts.data import TimeSeriesForecastingDataset
@@ -440,12 +442,14 @@ def main(config):
     val_data_loader = DataLoader(val_dataset, batch_size=config['VAL']['DATA_BATCH_SIZE'], shuffle=False)
     test_data_loader = DataLoader(test_dataset, batch_size=config['TEST']['DATA_BATCH_SIZE'], shuffle=False)
 
-    model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
-                config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
-                config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
-                config['MODEL']['STGCN']['droprate'])
+    # model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
+    #             config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
+    #             config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
+    #             config['MODEL']['STGCN']['droprate'])
     # model = MultiLayerPerceptron(12,12,32)
-    # model = GraphWaveNet(config['MODEL']['STGCN']['n_vertex'],in_dim=3)
+    
+    # model = GraphWaveNet(207,0.3,[torch.tensor(i) for i in adj_mx],True,True,None,3)
+    model = MultiLayerPerceptron(12,12,32)
     
     # print(net)
     # model.load_state_dict(torch.load(config['GENERAL']['MODEL_SAVE_PATH']+'5/STGCN.pt'))
