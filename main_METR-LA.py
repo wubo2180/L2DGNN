@@ -20,6 +20,7 @@ from basicts.utils import load_adj
 from basicts.losses import masked_mae as loss_masked_mae
 from basicts.metrics import masked_mae,masked_mape,masked_rmse
 from basicts.data import SCALER_REGISTRY
+from basicts.utils import load_pkl
 from tqdm import tqdm
 
 import learn2learn as l2l
