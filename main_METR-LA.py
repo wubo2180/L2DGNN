@@ -19,7 +19,7 @@ from MLP_arch import MultiLayerPerceptron
 from basicts.data import TimeSeriesForecastingDataset
 from torch.utils.data import Dataset, DataLoader
 from basicts.utils import load_adj
-from basicts.losses import masked_mae as loss_masked_mae
+# from basicts.losses import masked_mae as loss_masked_mae
 from basicts.metrics import masked_mae,masked_mape,masked_rmse
 from basicts.data import SCALER_REGISTRY
 from basicts.utils import load_pkl
@@ -327,10 +327,10 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         # k hop
         for i in range(num_nodes):
             for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-                support_temporal_loss = metric_forward (loss_masked_mae, [prediction_rescaled[:,:,k_hop_index[i],:], real_value_rescaled[:,:,k_hop_index[i],:]])
+                support_temporal_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,k_hop_index[i],:], real_value_rescaled[:,:,k_hop_index[i],:]])
                 # print(support_space_loss.item())
                 learner.adapt(support_temporal_loss)
-            query_temporal_loss += metric_forward (loss_masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
+            query_temporal_loss += metric_forward (masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
         query_temporal_loss = query_temporal_loss/num_nodes
         # for i in range(batch_size):
         #     for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
@@ -513,7 +513,6 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(0)
     config['GENERAL']['DEVICE'] = device
-    print(config)
     main(config)
 
 
