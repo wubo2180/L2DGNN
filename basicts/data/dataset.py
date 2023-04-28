@@ -29,7 +29,7 @@ class TimeSeriesForecastingDataset(Dataset):
         self.top_k = 10
         # print(self.index[-1])
         # dd
-        self.pos_sup_edge_index, self.neg_sup_edge_index, self.pos_que_edge_index, self.neg_que_edge_index = self.create_edge_index(self.index[-1][-1])
+        # self.pos_sup_edge_index, self.neg_sup_edge_index, self.pos_que_edge_index, self.neg_que_edge_index = self.create_edge_index(self.index[-1][-1])
         # print('###')
         # print(self.index)
         # dd
@@ -80,10 +80,10 @@ class TimeSeriesForecastingDataset(Dataset):
             future_data = self.data[idx[1], idx[2]]
         # 
         # print(idx)
-        pos_sup_edge_index = self.pos_sup_edge_index[idx[0]]
-        neg_sup_edge_index = self.neg_sup_edge_index[idx[0]]
-        pos_que_edge_index = self.pos_que_edge_index[idx[0]]
-        neg_que_edge_index = self.neg_que_edge_index[idx[0]]
+        # pos_sup_edge_index = self.pos_sup_edge_index[idx[0]]
+        # neg_sup_edge_index = self.neg_sup_edge_index[idx[0]]
+        # pos_que_edge_index = self.pos_que_edge_index[idx[0]]
+        # neg_que_edge_index = self.neg_que_edge_index[idx[0]]
         # print(pos_sup_edge_index.shape)
         # print(neg_sup_edge_index.shape)
         # print(pos_que_edge_index.shape)
@@ -91,7 +91,8 @@ class TimeSeriesForecastingDataset(Dataset):
         
         # print(history_data.shape)
         # return future_data, history_data, pos_edge_index, neg_edge_index
-        return future_data, history_data, pos_sup_edge_index, neg_sup_edge_index, pos_que_edge_index, neg_que_edge_index,self.neighbor_index,index,self.k_hop_index
+        # return future_data, history_data, pos_sup_edge_index, neg_sup_edge_index, pos_que_edge_index, neg_que_edge_index,self.neighbor_index,index,self.k_hop_index
+        return future_data, history_data, 1,1,1,1,self.neighbor_index,index,self.k_hop_index
 
     def __len__(self):
         """Dataset length

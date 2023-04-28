@@ -27,7 +27,19 @@ from tqdm import tqdm
 
 import learn2learn as l2l
 from utils import edge_index_transform
-
+from torch_geometric.utils import dense_to_sparse,negative_sampling,k_hop_subgraph,is_undirected,to_undirected,dropout_adj
+def drop_edge(adj_mx):
+    adj = adj_mx
+    adj_mx[torch.abs(adj_mx)>0] = 1.0
+    for i in range(adj_mx.shape[0]):
+        adj_mx[i,i] = 1.0
+    edge_index, _ = dense_to_sparse(adj_mx.long())
+    edge_index, _ = dropout_adj(edge_index, p = 0.5)
+    if not is_undirected(edge_index):
+        edge_index = to_undirected(edge_index)
+    row, col = edge_index
+    adj[row, col] = 0.0
+    return adj
 # from torch_geometric_temporal.nn.attention import STConv
 # from torch_geometric.utils import negative_sampling,structured_negative_sampling,to_dense_adj,dense_to_sparse,to_torch_coo_tensor,to_torch_csr_tensor,to_torch_csc_tensor
 # def compute_space_loss(embedding, pos_edge_index,neg_edge_index):
@@ -418,8 +430,9 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
 def main(config):
     # adj_orig, _ = load_adj(config['GENERAL']['ADJ_DIR'], "normlap")
     adj_mx, _ = load_adj(config['GENERAL']['ADJ_DIR'], "normlap")
-
+    
     adj_mx = torch.Tensor(adj_mx[0])
+    adj_mx = drop_edge(adj_mx)
     config['GENERAL']['NUM_NODE'] = adj_mx.shape[0]
     # print(adj_mx)
     config['MODEL']['STGCN']['n_vertex'] = adj_mx.shape[0]
@@ -482,34 +495,24 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch Training')
     parser.add_argument('--config', default='./parameter/METR-LA.yaml', type=str,
                         help='Path to the YAML config file')
-    parser.add_argument('--batch_size', default=32, type=int,
-                        help='Batch size for training')
-    parser.add_argument('--lr', default=0.01, type=float,
-                        help='Learning rate')
     parser.add_argument('--device', default=0, type=int,
                         help='device')
     args = parser.parse_args()
-
+    ###
     # 读取配置文件
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
-
+    device = torch.device("cuda:" + str(args.device)) if torch.cuda.is_available() else torch.device("cpu")
     # 更新配置文件中的参数
-    if args.batch_size is not None:
-        config['batch_size'] = args.batch_size
-    if args.lr is not None:
-        config['lr'] = args.lr
+    if args.device is not None:
+        config['device'] = device
+
     # 输出更新后的配置
     torch.manual_seed(0)
     np.random.seed(0)
-    device = torch.device("cuda:" + str(args.device)) if torch.cuda.is_available() else torch.device("cpu")
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(0)
     config['GENERAL']['DEVICE'] = device
-    # config['device'] = device
-    # print(config['device'])
-    # print(config['OPTIM']['LR'])
-    # dd
     main(config)
 
 
