@@ -19,7 +19,7 @@ from MLP_arch import MultiLayerPerceptron
 from basicts.data import TimeSeriesForecastingDataset
 from torch.utils.data import Dataset, DataLoader
 from basicts.utils import load_adj
-from basicts.losses import masked_mae as loss_masked_mae
+# from basicts.losses import masked_mae as loss_masked_mae
 from basicts.metrics import masked_mae,masked_mape,masked_rmse
 from basicts.data import SCALER_REGISTRY
 from basicts.utils import load_pkl
@@ -315,10 +315,10 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         # k hop
         for i in range(num_nodes):
             for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-                support_temporal_loss = metric_forward (loss_masked_mae, [prediction_rescaled[:,:,k_hop_index[i],:], real_value_rescaled[:,:,k_hop_index[i],:]])
+                support_temporal_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,k_hop_index[i],:], real_value_rescaled[:,:,k_hop_index[i],:]])
                 # print(support_space_loss.item())
                 learner.adapt(support_temporal_loss)
-            query_temporal_loss += metric_forward (loss_masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
+            query_temporal_loss += metric_forward (masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
         query_temporal_loss = query_temporal_loss/num_nodes
         # for i in range(batch_size):
         #     for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
@@ -442,14 +442,14 @@ def main(config):
     val_data_loader = DataLoader(val_dataset, batch_size=config['VAL']['DATA_BATCH_SIZE'], shuffle=False)
     test_data_loader = DataLoader(test_dataset, batch_size=config['TEST']['DATA_BATCH_SIZE'], shuffle=False)
 
-    # model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
-    #             config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
-    #             config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
-    #             config['MODEL']['STGCN']['droprate'])
+    model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
+                config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
+                config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
+                config['MODEL']['STGCN']['droprate'])
     # model = MultiLayerPerceptron(12,12,32)
     
     # model = GraphWaveNet(207,0.3,[torch.tensor(i) for i in adj_mx],True,True,None,3)
-    model = MultiLayerPerceptron(12,12,32)
+    # model = MultiLayerPerceptron(12,12,32)
     
     # print(net)
     # model.load_state_dict(torch.load(config['GENERAL']['MODEL_SAVE_PATH']+'5/STGCN.pt'))

@@ -26,6 +26,7 @@ class TimeSeriesForecastingDataset(Dataset):
         self.query_set_size = query_set_size
         self.adj_mx = adj_mx
         self.device = device
+        self.top_k = 10
         # print(self.index[-1])
         # dd
         self.pos_sup_edge_index, self.neg_sup_edge_index, self.pos_que_edge_index, self.neg_que_edge_index = self.create_edge_index(self.index[-1][-1])
@@ -131,7 +132,13 @@ class TimeSeriesForecastingDataset(Dataset):
             # print(subset)
             if subset.shape == 1: # consider isolated vertex
                 subset = torch.tensor([i,i].long()).to(self.device)
-            k_hop_index.append(subset[:-1].to(self.device)) # remove self node
+            subset = subset[:-1]
+            # print(subset.shape[0])
+            neighbor_nodes = subset.shape[0]
+            perm = np.random.randint(neighbor_nodes, size=min(self.top_k, neighbor_nodes))
+            # print(perm)
+            # print(subset[perm].shape[0])
+            k_hop_index.append(subset[perm].to(self.device)) # remove self node
         # dd
         return k_hop_index
     def create_edge_index(self, length):

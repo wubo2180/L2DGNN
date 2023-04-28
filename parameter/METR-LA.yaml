@@ -18,7 +18,7 @@ GENERAL:
 OPTIM:
     LR: 0.002
     MOMENTUM: 0.9
-    ADAPT_LR: 0.001
+    ADAPT_LR: 0.01
     META_LR: 0.001
 METRICS: {"MAE": masked_mae, "RMSE": masked_rmse, "MAPE": masked_mape}
 
@@ -60,7 +60,7 @@ TRAIN:
 # read data
     DATA_DIR : "datasets/METR-LA"
 # dataloader args, optional
-    DATA_BATCH_SIZE : 32
+    DATA_BATCH_SIZE : 1
     DATA_PREFETCH : False
     DATA_SHUFFLE : True
     DATA_NUM_WORKERS : 2
