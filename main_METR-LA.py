@@ -27,7 +27,19 @@ from tqdm import tqdm
 
 import learn2learn as l2l
 from utils import edge_index_transform
-
+from torch_geometric.utils import dense_to_sparse,negative_sampling,k_hop_subgraph,dropout_edge,is_undirected,to_undirected
+def drop_edge(adj_mx):
+    adj = adj_mx
+    adj_mx[torch.abs(adj_mx)>0] = 1.0
+    for i in range(adj_mx.shape[0]):
+        adj_mx[i,i] = 1.0
+    edge_index, _ = dense_to_sparse(adj_mx.long())
+    edge_index, _ = dropout_edge(edge_index, p = 0.5)
+    if not is_undirected(edge_index):
+        edge_index = to_undirected(edge_index)
+    row, col = edge_index
+    adj[row, col] = 0.0
+    return adj
 # from torch_geometric_temporal.nn.attention import STConv
 # from torch_geometric.utils import negative_sampling,structured_negative_sampling,to_dense_adj,dense_to_sparse,to_torch_coo_tensor,to_torch_csr_tensor,to_torch_csc_tensor
 # def compute_space_loss(embedding, pos_edge_index,neg_edge_index):
@@ -418,8 +430,9 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
 def main(config):
     # adj_orig, _ = load_adj(config['GENERAL']['ADJ_DIR'], "normlap")
     adj_mx, _ = load_adj(config['GENERAL']['ADJ_DIR'], "normlap")
-
+    
     adj_mx = torch.Tensor(adj_mx[0])
+    adj_mx = drop_edge(adj_mx)
     config['GENERAL']['NUM_NODE'] = adj_mx.shape[0]
     # print(adj_mx)
     config['MODEL']['STGCN']['n_vertex'] = adj_mx.shape[0]
@@ -442,14 +455,14 @@ def main(config):
     val_data_loader = DataLoader(val_dataset, batch_size=config['VAL']['DATA_BATCH_SIZE'], shuffle=False)
     test_data_loader = DataLoader(test_dataset, batch_size=config['TEST']['DATA_BATCH_SIZE'], shuffle=False)
 
-    # model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
-    #             config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
-    #             config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
-    #             config['MODEL']['STGCN']['droprate'])
+    model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
+                config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
+                config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
+                config['MODEL']['STGCN']['droprate'])
     # model = MultiLayerPerceptron(12,12,32)
     
     # model = GraphWaveNet(207,0.3,[torch.tensor(i) for i in adj_mx],True,True,None,3)
-    model = MultiLayerPerceptron(12,12,32)
+    # model = MultiLayerPerceptron(12,12,32)
     
     # print(net)
     # model.load_state_dict(torch.load(config['GENERAL']['MODEL_SAVE_PATH']+'5/STGCN.pt'))
