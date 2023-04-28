@@ -498,7 +498,7 @@ if __name__ == "__main__":
     parser.add_argument('--device', default=0, type=int,
                         help='device')
     args = parser.parse_args()
-
+    ###
     # 读取配置文件
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
