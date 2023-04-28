@@ -495,10 +495,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch Training')
     parser.add_argument('--config', default='./parameter/METR-LA.yaml', type=str,
                         help='Path to the YAML config file')
-    parser.add_argument('--batch_size', default=32, type=int,
-                        help='Batch size for training')
-    parser.add_argument('--lr', default=0.01, type=float,
-                        help='Learning rate')
     parser.add_argument('--device', default=0, type=int,
                         help='device')
     args = parser.parse_args()
@@ -506,23 +502,18 @@ if __name__ == "__main__":
     # 读取配置文件
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
-
+    device = torch.device("cuda:" + str(args.device)) if torch.cuda.is_available() else torch.device("cpu")
     # 更新配置文件中的参数
-    if args.batch_size is not None:
-        config['batch_size'] = args.batch_size
-    if args.lr is not None:
-        config['lr'] = args.lr
+    if args.device is not None:
+        config['device'] = device
+
     # 输出更新后的配置
     torch.manual_seed(0)
     np.random.seed(0)
-    device = torch.device("cuda:" + str(args.device)) if torch.cuda.is_available() else torch.device("cpu")
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(0)
     config['GENERAL']['DEVICE'] = device
-    # config['device'] = device
-    # print(config['device'])
-    # print(config['OPTIM']['LR'])
-    # dd
+    print(config)
     main(config)
 
 
