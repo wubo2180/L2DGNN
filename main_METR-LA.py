@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
+import copy
 import torchvision.transforms as transforms
 import yaml
 # import argparser
@@ -24,7 +24,7 @@ from basicts.metrics import masked_mae,masked_mape,masked_rmse
 from basicts.data import SCALER_REGISTRY
 from basicts.utils import load_pkl
 from tqdm import tqdm
-
+from collections import OrderedDict
 import learn2learn as l2l
 from utils import edge_index_transform
 from torch_geometric.utils import dense_to_sparse,negative_sampling,k_hop_subgraph,is_undirected,to_undirected,dropout_adj
@@ -40,40 +40,6 @@ def drop_edge(adj_mx):
     row, col = edge_index
     adj[row, col] = 0.0
     return adj
-# from torch_geometric_temporal.nn.attention import STConv
-# from torch_geometric.utils import negative_sampling,structured_negative_sampling,to_dense_adj,dense_to_sparse,to_torch_coo_tensor,to_torch_csr_tensor,to_torch_csc_tensor
-# def compute_space_loss(embedding, pos_edge_index,neg_edge_index):
-#     # embedding shape B L N C 
-    
-    
-#     B, L, N, C = embedding.shape
-#     embedding = embedding.transpose(1,2).reshape((B,N,-1))
-#     loss = 0.0
-#     for i in range(B):
-#         for j in range(L):
-#             pos_src_node_index = pos_edge_index[i][j][0]
-#             pos_tar_node_index = pos_edge_index[i][j][1]
-#             neg_src_node_index = neg_edge_index[i][j][0]
-#             neg_tar_node_index = neg_edge_index[i][j][1]
-#             # print(pos_src_node_index.shape)
-#             # print(embedding[i][j][pos_src_node_index].shape)
-#             # print(embedding[i][j][pos_src_node_index].shape)
-#             # dd
-#             pos_score = torch.sum(embedding[i][j][pos_src_node_index] * embedding[i][j][pos_tar_node_index], dim=1)
-#             neg_score = torch.sum(embedding[i][j][neg_src_node_index] * embedding[i][j][neg_tar_node_index], dim=1)
-            
-#             loss += criterion_space(pos_score, torch.ones_like(pos_score)) + \
-#            criterion_space(neg_score, torch.zeros_like(neg_score))
-            # print(pos_score.shape)
-    #         print(loss)
-    #         # dd
-    
-    # print(loss)
-    # print(B)
-    # print(L)
-    # print(loss/(B * L))
-    # dd
-    # return loss/(B * L)
 def compute_space_loss(embedding, pos_edge_index,neg_edge_index):
     # embedding shape B L N C 
     criterion_space = nn.BCEWithLogitsLoss()
@@ -88,10 +54,7 @@ def compute_space_loss(embedding, pos_edge_index,neg_edge_index):
         pos_tar_node_index = pos_edge_index[i,1,:].flatten()
         neg_src_node_index = neg_edge_index[i,0,:].flatten()
         neg_tar_node_index = neg_edge_index[i,1,:].flatten()
-    # print(pos_src_node_index.shape)
-    # print(embedding[i][j][pos_src_node_index].shape)
-    # print(embedding[i][j][pos_src_node_index].shape)
-    # dd
+
         pos_score = torch.sum(embedding[i][pos_src_node_index] * embedding[i][pos_tar_node_index], dim=1)
         neg_score = torch.sum(embedding[i][neg_src_node_index] * embedding[i][neg_tar_node_index], dim=1)
             
@@ -107,17 +70,13 @@ def compute_temporal_loss(embedding, pos_edge_index,neg_edge_index,real_value_re
     for i in range(B):
         for j in range(L):
             pos_src_node_index = pos_edge_index[i][j][0]
-            # pos_tar_node_index = pos_edge_index[i][j][1]
-            # neg_src_node_index = neg_edge_index[i][j][0]
-            # neg_tar_node_index = neg_edge_index[i][j][1]
+
             embedding_list.append(embedding[i][j][pos_src_node_index])
             real_value_list.append(real_value_rescaled[i][j][pos_src_node_index])
 
     embedding_list = torch.stack(embedding_list).reshape((B, L, E, C))
     real_value_list = torch.stack(real_value_list).reshape((B, L, E, C))
     loss = metric_forward (masked_mae, [embedding_list, real_value_list])
-    # print(loss.item())
-    # dd
     return loss
 def compute_long_temporal_loss(prediction_rescaled, real_value_rescaled,index_list):
     timespan = range(20)
@@ -129,10 +88,7 @@ def compute_long_temporal_loss(prediction_rescaled, real_value_rescaled,index_li
     
     real_value_rescaled  = real_value_rescaled.squeeze()
     real_value_rescaled = real_value_rescaled.mean(dim = 1)
-    # print(real_value_rescaled.shape)
-    # print(real_value_rescaled[timespan].shape)
-    # print(real_value_rescaled[timespan])
-    # print()
+
     loss = metric_forward (masked_mae, [prediction_rescaled[index_list], real_value_rescaled[index_list]])
     return loss
 def compute_edge_loss(prediction_rescaled,real_value_rescaled, pos_edge_index,neg_edge_index,):
@@ -141,45 +97,7 @@ def compute_edge_loss(prediction_rescaled,real_value_rescaled, pos_edge_index,ne
 
     loss = metric_forward (masked_mae, [prediction_rescaled[pos_edge_index], real_value_rescaled[pos_edge_index]])
     return loss
-# def compute_long_temporal_loss(prediction_rescaled, real_value_rescaled, pos_edge_index,neg_edge_index,real_value_rescaled):
-#     embedding_list = []
-#     real_value_list = []
-#     B,  _, E = pos_edge_index.shape
-#     B, L, N, C = embedding.shape
-#     embedding = embedding.transpose(2,1).reshape((B,N,-1))
-#     # print(embedding.shape)
-#     # dd
-#     loss = 0.0
-#     print(pos_edge_index[0])
-#     dd
-#     for i in range(B):
 
-#         pos_src_node_index = pos_edge_index[i][0]
-#         # print(pos_src_node_index.shape)
-#         # pos_tar_node_index = pos_edge_index[i][j][1]
-#         # neg_src_node_index = neg_edge_index[i][j][0]
-#         # neg_tar_node_index = neg_edge_index[i][j][1]
-#         embedding_list.append(embedding[i][pos_src_node_index])
-#         real_value_list.append(real_value_rescaled[i][pos_src_node_index])
-#         print(embedding[i].shape)
-#         print(embedding[i][pos_src_node_index].shape)
-#         print(embedding[i][pos_src_node_index][:][:])
-        
-#         dd
-#     # print(torch.stack(embedding_list).shape)
-#     # dd
-#     embedding_list = torch.stack(embedding_list).reshape((B,E,-1)).mean(dim=2)
-
-#     real_value_list = torch.stack(real_value_list).reshape((B, E,-1)).mean(dim=2)
-
-#     loss = metric_forward (masked_mae, [embedding_list, real_value_list])
-#     # print(loss.item())
-#     # dd
-#     print(embedding_list.shape)
-#     print(real_value_list.shape)
-#     print(loss.item())
-#     dd
-#     return loss/B
 def metric_forward(metric_func, args):
     """Computing metrics.
 
@@ -283,133 +201,63 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
     num_nodes = config['GENERAL']['NUM_NODE']
     loss = 0.0
     for idx, data in enumerate(tqdm(train_data_loader)):
-        # if idx>10:
-        #     break
-        # if idx <749:
-        #     continue
+
         
-        learner = maml.clone()
 
-
-        query_space_loss = 0.0
-        query_temporal_loss = 0.0
-        query_edge_loss = 0.0
-        query_long_temporal_loss = 0.0
+        query_loss = 0.0
+        
         future_data = data[0].to(device)
         history_data = data[1].to(device)
-        pos_sup_edge_index = data[2].to(device)
-        neg_sup_edge_index = data[3].to(device)
-        pos_que_edge_index = data[4].to(device)
-        neg_que_edge_index = data[5].to(device)
-        neighbor_index = data[6]
+
         
         values,indices  = torch.sort(data[7])
         
         k_hop_index = data[8]
         
-        
         batch_size = future_data.shape[0]
-        # print(indices[:int(batch_size/2)])
-        # print(batch_size)
-        # dd
-        # print(pos_sup_edge_index.shape)
-        # print(neg_sup_edge_index.shape)
-        # print(pos_que_edge_index.shape)
-        # print(neg_que_edge_index.shape)
-        preds = model(history_data,future_data,32,1,True)
 
-        preds = preds[:, :, :, config["MODEL"]["FROWARD_FEATURES"]]
-        labels = future_data[:, :, :, config["MODEL"]["TARGET_FEATURES"]]
-        prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
-        real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
-        # print(prediction_rescaled.shape)
-        # dd
-        # k hop
-        for i in range(num_nodes):
+
+        
+        origin_weights = OrderedDict(model.named_parameters())
+        # print(origin_weights)
+        for i in range(num_nodes): # num_nodes = tasks
+            # model_clone = copy.deepcopy(model)
+            # model_clone_optimizer = optim.Adam(model_clone.parameters(), config['OPTIM']['ADAPT_LR'], weight_decay=1.0e-5,eps=1.0e-8)
+            # model.update_parameter(origin_weights)
+            learner = maml.clone()
             for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-                support_temporal_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,k_hop_index[i],:], real_value_rescaled[:,:,k_hop_index[i],:]])
-                # print(support_space_loss.item())
-                learner.adapt(support_temporal_loss)
-            query_temporal_loss += metric_forward (masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
-        query_temporal_loss = query_temporal_loss/num_nodes
-        # for i in range(batch_size):
-        #     for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-        #         # print(pos_sup_edge_index[i][0].shape)
-        #         # print(pos_sup_edge_index[i][1])
-        #         # print(prediction_rescaled[i][:].shape)
-        #         # # print(prediction_rescaled[i][:][pos_sup_edge_index[i][1]])
-        #         # dd
-        #         support_edge_loss = metric_forward (masked_mae, [prediction_rescaled[i,:,pos_sup_edge_index[i][0], :], real_value_rescaled[i,:,pos_sup_edge_index[i][0], :]])
-        #         # print(support_space_loss.item())
-        #         learner.adapt(support_edge_loss)
-        #     query_edge_loss += metric_forward (masked_mae, [prediction_rescaled[i,:,pos_sup_edge_index[i][1], :], real_value_rescaled[i,:,pos_sup_edge_index[i][1], :]])
-        # query_edge_loss = query_edge_loss/batch_size
-        # for i in range(num_nodes):
-        #     for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-        #         support_temporal_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,neighbor_index[i],:], real_value_rescaled[:,:,neighbor_index[i],:]])
-        #         # print(support_space_loss.item())
-        #         learner.adapt(support_temporal_loss)
-        #     query_temporal_loss += metric_forward (masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
-        # query_temporal_loss = query_temporal_loss/num_nodes
-        # loss += query_temporal_loss
-        # for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-        #     support_space_loss = compute_space_loss(prediction_rescaled, pos_sup_edge_index, neg_sup_edge_index)
-        #     # print(support_space_loss.item())
-        #     learner.adapt(support_space_loss)
-        # query_space_loss = compute_space_loss(prediction_rescaled, pos_que_edge_index, neg_que_edge_index)
-        
-        # for i in range(num_nodes):
-        #     for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-        #         # print(batch_size)
-        #         # print(prediction_rescaled.shape)
-        #         support_long_temporal_loss = compute_long_temporal_loss(prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:],indices[:int(batch_size/2)])
-        #         # print(support_long_temporal_loss.item())
-        #         # dd
-        #         learner.adapt(support_long_temporal_loss)
-        #     query_long_temporal_loss = compute_long_temporal_loss(prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:],indices[int(batch_size/2):])
-        # query_long_temporal_loss = query_long_temporal_loss/num_nodes
-        # loss += query_long_temporal_loss
-        temporal_loss = query_long_temporal_loss+query_temporal_loss+query_edge_loss
+                preds = learner(history_data,future_data,32,1,True)
+
+                preds = preds[:, :, :, config["MODEL"]["FROWARD_FEATURES"]]
+                labels = future_data[:, :, :, config["MODEL"]["TARGET_FEATURES"]]
+                prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
+                real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
+                
+                support_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,k_hop_index[i],:], real_value_rescaled[:,:,k_hop_index[i],:]])
+                # model_clone_optimizer.zero_grad()
+                # support_loss.backward(retain_graph= True)
+                # model_clone_optimizer.step()
+                # gradients = torch.autograd.grad(support_loss, fast_weights.values(), create_graph=True)
+
+                # fast_weights = OrderedDict(
+                #     (name, param - config['OPTIM']['ADAPT_LR'] * grad)
+                #     for ((name, param), grad) in zip(origin_weights.items(), gradients)
+                # )
+                # model.update_parameter(fast_weights)
+                learner.adapt(support_loss)
+            preds = learner(history_data,future_data,32,1,True)
+            preds = preds[:, :, :, config["MODEL"]["FROWARD_FEATURES"]]
+            labels = future_data[:, :, :, config["MODEL"]["TARGET_FEATURES"]]
+            prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
+            real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
+                
+            query_loss += metric_forward (masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
+        query_loss = query_loss/num_nodes
+        # model.update_parameter(origin_weights)
         optimizer.zero_grad()
-        temporal_loss.backward()
+        query_loss.backward()
         optimizer.step()
-        loss += temporal_loss
-        # for i in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-        #     support_temporal_loss = compute_temporal_loss(prediction_rescaled, pos_sup_edge_index, neg_sup_edge_index,real_value_rescaled )
-        #     # print(support_space_loss.item())
-        #     learner.adapt(support_temporal_loss)
-        #     query_temporal_loss += compute_temporal_loss(prediction_rescaled, pos_que_edge_index, neg_que_edge_index, real_value_rescaled)
-        # loss +=query_space_loss.item()
-        # for _ in range(adapt_steps): # adaptation_steps
-        #     support_preds = learner(x_support)
-        #     support_loss=lossfn(support_preds, y_support)
-        #     learner.adapt(support_loss)
-        
-        # print('pos_sup_edge_index')
-        # print(pos_sup_edge_index[:][:][0].shape)
-        # print(neg_sup_edge_index.shape)
-        # print(pos_que_edge_index.shape)
-        # print(neg_que_edge_index.shape)
-        # dd
-        # for i in range(batch_size):
-        # fast_weights = OrderedDict(model.named_parameters())
-        # print
-        # for i in range(config['META']['UPDATE_SAPCE_STEP']): # args.update_sapce_step compute support loss
-        #     support_space_loss = compute_temporal_loss(prediction_rescaled, pos_sup_edge_index, neg_sup_edge_index,real_value_rescaled )
-        #     gradients = torch.autograd.grad(support_space_loss, fast_weights.values(), allow_unused=True, create_graph=True)
-        #     print(gradients)
-        #     dd
-        #     fast_weights = OrderedDict(
-        #             (name, param - config['OPTIM']['ADAPT_LR'] * grad)
-        #             for ((name, param), grad) in zip(fast_weights.items(), gradients)
-        #         )
-        #     query_space_loss += compute_temporal_loss(prediction_rescaled, pos_que_edge_index, neg_que_edge_index, real_value_rescaled) # compute query loss
-
-        # query_space_loss = query_space_loss
-        # loss = metric_forward(masked_mae, [prediction_rescaled,real_value_rescaled])
-        # update model parameters
-        # print(query_space_loss.item())
-
+        loss += query_loss.item()
 
         prediction.append(prediction_rescaled.detach().cpu())        # preds = forward_return[0]
         real_value.append(real_value_rescaled.detach().cpu())        # testy = forward_return[1]
@@ -459,6 +307,13 @@ def main(config):
                 config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
                 config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
                 config['MODEL']['STGCN']['droprate'])
+    print(model)
+    # print('ff')
+    # dd
+    # model = nn.Linear(10,10)
+    # print(model.W.data)
+
+    # dd
     # model = MultiLayerPerceptron(12,12,32)
     
     # model = GraphWaveNet(207,0.3,[torch.tensor(i) for i in adj_mx],True,True,None,3)
@@ -468,12 +323,9 @@ def main(config):
     # model.load_state_dict(torch.load(config['GENERAL']['MODEL_SAVE_PATH']+'5/STGCN.pt'))
     print(config['GENERAL']['DEVICE'])
     model = model.to(config['GENERAL']['DEVICE'])
-    # 定义优化器
-    # torch.load()
-    # model = SineModel(dim=hidden_dim)
-    # maml = 1
+
     maml = l2l.algorithms.MAML(model, lr=config['OPTIM']['ADAPT_LR'], first_order=False, allow_unused=True)
-    optimizer = optim.Adam(maml.parameters(), config['OPTIM']['META_LR'], weight_decay=1.0e-5,eps=1.0e-8)
+    optimizer = optim.Adam(model.parameters(), config['OPTIM']['META_LR'], weight_decay=1.0e-5,eps=1.0e-8)
     # optimizer = optim.Adam(model.parameters(), lr=config['OPTIM']['LR'], weight_decay=1.0e-5,eps=1.0e-8)
     print(optimizer)
     # dd
