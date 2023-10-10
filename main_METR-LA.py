@@ -170,7 +170,7 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         optimizer.zero_grad()
         meta_train_loss.backward()
         optimizer.step()
-        loss += meta_train_loss
+        loss += meta_train_loss.item()
 
         prediction.append(prediction_rescaled.detach().cpu())        # preds = forward_return[0]
         real_value.append(real_value_rescaled.detach().cpu())        # testy = forward_return[1]
