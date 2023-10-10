@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import random
+
 import torchvision.transforms as transforms
 import yaml
 # import argparser
@@ -25,7 +25,7 @@ from basicts.data import SCALER_REGISTRY
 from basicts.utils import load_pkl
 from tqdm import tqdm
 
-import learn2learn as l2l
+
 from utils import edge_index_transform
 from torch_geometric.utils import dense_to_sparse,negative_sampling,k_hop_subgraph,is_undirected,to_undirected,dropout_adj
 def drop_edge(adj_mx):
@@ -133,8 +133,9 @@ def test(test_data_loader,model,config,scaler):
             metric_results[metric_name] = metric_item.item()
         print("Evaluate val data" + \
                     "val MAE: {:.4f}, val RMSE: {:.4f}, val MAPE: {:.4f}".format(metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"]))
-def train(train_data_loader,model,config,scaler,optimizer,maml):
+def train(train_data_loader,model,config,scaler):
     model.train()
+    optimizer = optim.Adam(model.parameters(), config['OPTIM']['META_LR'], weight_decay=1.0e-5,eps=1.0e-8)
     metrics = {"MAE": masked_mae, "RMSE": masked_rmse, "MAPE": masked_mape}
     prediction = []
     real_value = []
@@ -143,8 +144,13 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
     num_nodes = config['GENERAL']['NUM_NODE']
     loss = 0.0
     for idx, data in enumerate(tqdm(train_data_loader)):
+        model_copy = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
+                config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
+                config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
+                config['MODEL']['STGCN']['droprate']).to(config['GENERAL']['DEVICE'])
+        model_copy.load_state_dict(model.state_dict())
+        inner_optimizer = optim.Adam(model_copy.parameters(), lr=config['OPTIM']['ADAPT_LR'])
 
-        learner = maml.clone()
 
         meta_train_loss = 0.0
         future_data = data[0].to(device)
@@ -157,13 +163,17 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         labels = future_data[:, :, :, config["MODEL"]["TARGET_FEATURES"]]
         
         real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
-        for i in random.sample(range(num_nodes), 10): # task
+        for i in range(num_nodes): # task
             for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-                preds = learner(history_data,future_data,batch_size,1,True)
+                preds = model(history_data,future_data,batch_size,1,True)
                 preds = preds[:, :, :, config["MODEL"]["FROWARD_FEATURES"]]
                 prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
-                support_loss = metric_forward(masked_mae, [prediction_rescaled[:,:,k_hop_index[i],:], real_value_rescaled[:,:,k_hop_index[i],:]])
-                learner.adapt(support_loss)
+                support_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,k_hop_index[i],:], real_value_rescaled[:,:,k_hop_index[i],:]])
+                # support_loss.backward()
+                grads = torch.autograd.grad(support_loss, model.parameters(), retain_graph=True)
+                for param, grad in zip(model.parameters(), grads):
+                    param.data -= 0.01 * grad  # 根据学习率更新参数
+                
             query_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
             meta_train_loss += query_loss
         meta_train_loss /=num_nodes
@@ -229,14 +239,14 @@ def main(config):
     print(config['GENERAL']['DEVICE'])
     model = model.to(config['GENERAL']['DEVICE'])
 
-    maml = l2l.algorithms.MAML(model, lr=config['OPTIM']['ADAPT_LR'], first_order=False, allow_unused=True)
-    optimizer = optim.Adam(maml.parameters(), config['OPTIM']['META_LR'], weight_decay=1.0e-5,eps=1.0e-8)
+    # maml = l2l.algorithms.MAML(model, lr=config['OPTIM']['ADAPT_LR'], first_order=False, allow_unused=True)
+    # optimizer = optim.Adam(maml.parameters(), config['OPTIM']['META_LR'], weight_decay=1.0e-5,eps=1.0e-8)
     # optimizer = optim.Adam(model.parameters(), lr=config['OPTIM']['LR'], weight_decay=1.0e-5,eps=1.0e-8)
-    print(optimizer)
+    # print(optimizer)
     # dd
     for epoch in range(config['TRAIN']['EPOCHS']):
         print('============ epoch {:d} ============'.format(epoch))
-        train(train_data_loader,model,config,scaler,optimizer,maml)
+        train(train_data_loader,model,config,scaler)
         val(val_data_loader,model,config,scaler)
         test(test_data_loader,model,config,scaler)
         # path = config['GENERAL']['MODEL_SAVE_PATH']+str(epoch)

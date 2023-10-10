@@ -27,12 +27,6 @@ class TimeSeriesForecastingDataset(Dataset):
         self.adj_mx = adj_mx
         self.device = device
         self.top_k = 10
-        # print(self.index[-1])
-        # dd
-        # self.pos_sup_edge_index, self.neg_sup_edge_index, self.pos_que_edge_index, self.neg_que_edge_index = self.create_edge_index(self.index[-1][-1])
-        # print('###')
-        # print(self.index)
-        # dd
         self.neighbor_index = self.create_neighbor_index()
         self.k_hop_index = self.creat_k_hop_neighbor_index()
 
@@ -78,21 +72,7 @@ class TimeSeriesForecastingDataset(Dataset):
             history_index.append(idx[1])
             history_data = self.data[history_index]
             future_data = self.data[idx[1], idx[2]]
-        # 
-        # print(idx)
-        # pos_sup_edge_index = self.pos_sup_edge_index[idx[0]]
-        # neg_sup_edge_index = self.neg_sup_edge_index[idx[0]]
-        # pos_que_edge_index = self.pos_que_edge_index[idx[0]]
-        # neg_que_edge_index = self.neg_que_edge_index[idx[0]]
-        # print(pos_sup_edge_index.shape)
-        # print(neg_sup_edge_index.shape)
-        # print(pos_que_edge_index.shape)
-        # print(neg_que_edge_index.shape)
-        
-        # print(history_data.shape)
-        # return future_data, history_data, pos_edge_index, neg_edge_index
-        # return future_data, history_data, pos_sup_edge_index, neg_sup_edge_index, pos_que_edge_index, neg_que_edge_index,self.neighbor_index,index,self.k_hop_index
-        return future_data, history_data, 1,1,1,1,self.neighbor_index,index,self.k_hop_index
+        return future_data, history_data,self.neighbor_index,index,self.k_hop_index
 
     def __len__(self):
         """Dataset length
@@ -108,13 +88,7 @@ class TimeSeriesForecastingDataset(Dataset):
         for i in range(adj_mx.shape[0]):
             adj_mx[i][i] = 0.0
             index_non_zero.append(torch.nonzero(adj_mx[i].squeeze().to(self.device)))
-            # print(torch.nonzero(adj_mx[i].squeeze()))
-            if i>1:
-                break
-        # self.adj_mx
-        # print('test')
-        # print(index_non_zero)
-        # dd
+  
         return index_non_zero
     def creat_k_hop_neighbor_index(self):
         adj_mx = self.adj_mx
@@ -122,23 +96,15 @@ class TimeSeriesForecastingDataset(Dataset):
         for i in range(adj_mx.shape[0]):
             adj_mx[i,i] = 1.0
         edge_index, _ = dense_to_sparse(adj_mx.long())
-        # print(edge_index[:,:20])
-        # print(edge_index.shape)
         k_hop_index = []
         for i in range(adj_mx.shape[0]):
             subset, k_hop_edge_index, mapping, edge_mask = k_hop_subgraph(i, 2, edge_index)
-            # print(subset.shape)
-            # print(k_hop_edge_index.shape)
-            # subset.remove()
-            # print(subset)
             if subset.shape == 1: # consider isolated vertex
                 subset = torch.tensor([i,i].long()).to(self.device)
             subset = subset[:-1]
             # print(subset.shape[0])
             neighbor_nodes = subset.shape[0]
             perm = np.random.randint(neighbor_nodes, size=min(self.top_k, neighbor_nodes))
-            # print(perm)
-            # print(subset[perm].shape[0])
             k_hop_index.append(subset[perm].to(self.device)) # remove self node
         # dd
         return k_hop_index
@@ -169,4 +135,3 @@ class TimeSeriesForecastingDataset(Dataset):
         
 
         return pos_sup_edge_index, neg_sup_edge_index, pos_que_edge_index, neg_que_edge_index
-        # return pos_edge_index,neg_edge_index
