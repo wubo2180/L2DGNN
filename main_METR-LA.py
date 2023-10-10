@@ -24,7 +24,7 @@ from basicts.metrics import masked_mae,masked_mape,masked_rmse
 from basicts.data import SCALER_REGISTRY
 from basicts.utils import load_pkl
 from tqdm import tqdm
-
+from collections import OrderedDict
 import learn2learn as l2l
 from utils import edge_index_transform
 from torch_geometric.utils import dense_to_sparse,negative_sampling,k_hop_subgraph,is_undirected,to_undirected,dropout_adj
@@ -219,6 +219,13 @@ def main(config):
                 config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
                 config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
                 config['MODEL']['STGCN']['droprate'])
+    print(model)
+    # print('ff')
+    # dd
+    # model = nn.Linear(10,10)
+    # print(model.W.data)
+
+    # dd
     # model = MultiLayerPerceptron(12,12,32)
     
     # model = GraphWaveNet(207,0.3,[torch.tensor(i) for i in adj_mx],True,True,None,3)
@@ -229,8 +236,9 @@ def main(config):
     print(config['GENERAL']['DEVICE'])
     model = model.to(config['GENERAL']['DEVICE'])
 
+
     maml = l2l.algorithms.MAML(model, lr=config['OPTIM']['ADAPT_LR'], first_order=False, allow_unused=True)
-    optimizer = optim.Adam(maml.parameters(), config['OPTIM']['META_LR'], weight_decay=1.0e-5,eps=1.0e-8)
+    optimizer = optim.Adam(model.parameters(), config['OPTIM']['META_LR'], weight_decay=1.0e-5,eps=1.0e-8)
     # optimizer = optim.Adam(model.parameters(), lr=config['OPTIM']['LR'], weight_decay=1.0e-5,eps=1.0e-8)
     print(optimizer)
     # dd
