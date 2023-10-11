@@ -2,3 +2,4 @@ easy-torch
 easydict
 learn2learn
 packaging
+pyyaml
