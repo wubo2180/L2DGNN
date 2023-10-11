@@ -3,3 +3,4 @@ easydict
 learn2learn
 packaging
 pyyaml
+torch_geometric
