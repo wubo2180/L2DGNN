@@ -60,7 +60,7 @@ TRAIN:
 # read data
     DATA_DIR : "datasets/METR-LA"
 # dataloader args, optional
-    DATA_BATCH_SIZE : 32
+    DATA_BATCH_SIZE : 64
     DATA_PREFETCH : False
     DATA_SHUFFLE : True
     DATA_NUM_WORKERS : 2
@@ -74,7 +74,7 @@ VAL:
 # read data
     DATA_DIR : "datasets/METR-LA"
 # dataloader args, optional
-    DATA_BATCH_SIZE : 32
+    DATA_BATCH_SIZE : 64
     DATA_PREFETCH : False
     DATA_SHUFFLE : False
     DATA_NUM_WORKERS : 2
@@ -89,7 +89,7 @@ TEST:
 # read data
     DATA_DIR : "datasets/METR-LA"
 # dataloader args, optional
-    DATA_BATCH_SIZE : 32
+    DATA_BATCH_SIZE : 64
     DATA_PREFETCH : False
     DATA_SHUFFLE : False
     DATA_NUM_WORKERS : 2
