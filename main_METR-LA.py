@@ -157,7 +157,8 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         labels = future_data[:, :, :, config["MODEL"]["TARGET_FEATURES"]]
         
         real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
-        for i in random.sample(range(num_nodes), 10): # task
+        # for i in random.sample(range(num_nodes), 10): # task
+        for i in range(num_nodes): # task
             learner = maml.clone()
             for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
                 preds = learner(history_data,future_data,batch_size,1,True)
