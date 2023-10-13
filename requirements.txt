@@ -4,3 +4,4 @@ learn2learn
 packaging
 pyyaml
 torch_geometric
+torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
