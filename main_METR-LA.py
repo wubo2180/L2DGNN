@@ -144,8 +144,6 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
     loss = 0.0
     for idx, data in enumerate(tqdm(train_data_loader)):
 
-        learner = maml.clone()
-
         meta_train_loss = 0.0
         future_data = data[0].to(device)
         history_data = data[1].to(device)
