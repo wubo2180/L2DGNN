@@ -98,7 +98,7 @@ class TimeSeriesForecastingDataset(Dataset):
         edge_index, _ = dense_to_sparse(adj_mx.long())
         k_hop_index = []
         for i in range(adj_mx.shape[0]):
-            subset, k_hop_edge_index, mapping, edge_mask = k_hop_subgraph(i, 2, edge_index)
+            subset, k_hop_edge_index, mapping, edge_mask = k_hop_subgraph(i, 1, edge_index)
             if subset.shape == 1: # consider isolated vertex
                 subset = torch.tensor([i,i].long()).to(self.device)
             subset = subset[:-1]
