@@ -1,4 +1,6 @@
 easy-torch
 easydict
 learn2learn
-torch_gemetric
+packaging
+pyyaml
+torch_geometric
