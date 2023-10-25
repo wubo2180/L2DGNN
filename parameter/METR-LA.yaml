@@ -60,7 +60,7 @@ TRAIN:
 # read data
     DATA_DIR : "datasets/METR-LA"
 # dataloader args, optional
-    DATA_BATCH_SIZE : 32
+    DATA_BATCH_SIZE : 1
     DATA_PREFETCH : False
     DATA_SHUFFLE : True
     DATA_NUM_WORKERS : 2

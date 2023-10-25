@@ -142,7 +142,7 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
 
     num_nodes = config['GENERAL']['NUM_NODE']
     loss = 0.0
-    for idx, data in enumerate(tqdm(train_data_loader)):
+    for idx, data in enumerate(tqdm(train_data_loader,ncols = 200)):
 
         learner = maml.clone()
 
@@ -157,7 +157,9 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         labels = future_data[:, :, :, config["MODEL"]["TARGET_FEATURES"]]
         
         real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
-        for i in random.sample(range(num_nodes), 10): # task
+        # print(real_value_rescaled.shape)
+        # for i in random.sample(range(num_nodes), 10): # task random.sample(range(num_nodes), 10)
+        for i in range(num_nodes)
             for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
                 preds = learner(history_data,future_data,batch_size,1,True)
                 preds = preds[:, :, :, config["MODEL"]["FROWARD_FEATURES"]]
@@ -206,7 +208,19 @@ def main(config):
     train_dataset = TimeSeriesForecastingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'train',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx,config['GENERAL']['DEVICE'])
     val_dataset = TimeSeriesForecastingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'valid',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx,config['GENERAL']['DEVICE'])
     test_dataset = TimeSeriesForecastingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'test',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx,config['GENERAL']['DEVICE'])
-
+    # meta_train_dataset = l2l.data.MetaDataset(train_dataset)
+    # print(meta_train_dataset)
+    # from learn2learn.data import TaskDataset
+    # dataset = l2l.data.MetaDataset(train_dataset)
+    # transforms = [
+    # l2l.data.transforms.NWays(dataset, n=5),
+    # l2l.data.transforms.KShots(dataset, k=1),
+    # l2l.data.transforms.LoadData(dataset),
+    #             ]
+    # taskset = TaskDataset(dataset, transforms, num_tasks=20000)
+    # for task in taskset:
+    #     X, y = task
+    # dd
     print(len(train_dataset))
     print(len(val_dataset))
     print(len(test_dataset))
