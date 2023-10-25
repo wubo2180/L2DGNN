@@ -142,7 +142,7 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
 
     num_nodes = config['GENERAL']['NUM_NODE']
     loss = 0.0
-    for idx, data in enumerate(tqdm(train_data_loader,ncols = 200)):
+    for idx, data in enumerate(tqdm(train_data_loader)):
 
         learner = maml.clone()
 
@@ -158,8 +158,8 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         
         real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
         # print(real_value_rescaled.shape)
-        # for i in random.sample(range(num_nodes), 10): # task random.sample(range(num_nodes), 10)
-        for i in range(num_nodes):
+        for i in random.sample(range(num_nodes), 10): # task random.sample(range(num_nodes), 10)
+        # for i in range(num_nodes):
             for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
                 preds = learner(history_data,future_data,batch_size,1,True)
                 preds = preds[:, :, :, config["MODEL"]["FROWARD_FEATURES"]]
