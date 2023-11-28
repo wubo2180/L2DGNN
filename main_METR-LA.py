@@ -162,14 +162,18 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         for i in range(batch_size): # task per step
         # for i in range(num_nodes):
             learner = maml.clone()
+            support_loss = 0
             for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
                 preds = learner(history_data,future_data,batch_size,1,True)
                 preds = preds[i, :, :, config["MODEL"]["FROWARD_FEATURES"]]
                 prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
-                print(k_hop_index)
-                dd
-                support_loss = metric_forward(masked_mae, [prediction_rescaled[i,:,k_hop_index,:], real_value_rescaled[i,:,k_hop_index,:]])
+                for hop in k_hop_index:
+                    support_loss += metric_forward(masked_mae, [prediction_rescaled[i,:,hop,:], real_value_rescaled[i,:,hop,:]])
+                # print(k_hop_index)
+                # dd
+                # support_loss = metric_forward(masked_mae, [prediction_rescaled[i,:,k_hop_index,:], real_value_rescaled[i,:,k_hop_index,:]])
                 learner.adapt(support_loss)
+            
             query_loss = metric_forward (masked_mae, [prediction_rescaled[i,:,:,:], real_value_rescaled[i,:,:,:]])
             meta_train_loss += query_loss
         # meta_train_loss /=num_nodes
