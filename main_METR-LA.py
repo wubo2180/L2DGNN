@@ -12,23 +12,25 @@ import yaml
 # import argparser
 from argparse import ArgumentParser
 from basicts.archs import STGCN
-from basicts.archs import GraphWaveNet,Linear
-from MLP_arch import MultiLayerPerceptron 
-# from step.step_data import ForecastingDataset
-# from step.step_data import TimeSeriesForecastingDataset
 from basicts.data import TimeSeriesForecastingDataset
 from torch.utils.data import Dataset, DataLoader
 from basicts.utils import load_adj
-# from basicts.losses import masked_mae as loss_masked_mae
+
 from basicts.metrics import masked_mae,masked_mape,masked_rmse
 from basicts.data import SCALER_REGISTRY
 from basicts.utils import load_pkl
 from tqdm import tqdm
 from collections import OrderedDict
 import learn2learn as l2l
-
+import logging
 from utils import edge_index_transform
 from torch_geometric.utils import dense_to_sparse,negative_sampling,k_hop_subgraph,is_undirected,to_undirected,dropout_adj
+logging.basicConfig(
+    filename='log/metrics.log',  # 指定日志文件名
+    level=logging.INFO,       # 设置日志级别为INFO
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 def drop_edge(adj_mx):
     adj = adj_mx
     adj_mx[torch.abs(adj_mx)>0] = 1.0
@@ -88,6 +90,8 @@ def val(val_data_loader,model,config,scaler):
             metric_results[metric_name] = metric_item.item()
         print("Evaluate val data" + \
                     "val MAE: {:.4f}, val RMSE: {:.4f}, val MAPE: {:.4f}".format(metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"]))
+        logging.info("Evaluate val data" + \
+                    "val MAE: {:.4f}, val RMSE: {:.4f}, val MAPE: {:.4f}".format(metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"]))
 def test(test_data_loader,model,config,scaler):
     """Evaluate the model.
 
@@ -133,6 +137,8 @@ def test(test_data_loader,model,config,scaler):
             metric_item = metric_forward(metric_func, [prediction, real_value])
             metric_results[metric_name] = metric_item.item()
         print("Evaluate val data" + \
+                    "val MAE: {:.4f}, val RMSE: {:.4f}, val MAPE: {:.4f}".format(metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"]))
+        logging.info("Evaluate val data" + \
                     "val MAE: {:.4f}, val RMSE: {:.4f}, val MAPE: {:.4f}".format(metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"]))
 def train(train_data_loader,model,config,scaler,optimizer,maml):
     model.train()
