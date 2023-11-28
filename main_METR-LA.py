@@ -207,9 +207,9 @@ def main(config):
     config['MODEL']['STGCN']['gso'] = adj_mx.to(config['GENERAL']['DEVICE'])
     # 加载数据集d
     # num_sampled_edges = config['META']['SUPPORT_SET_SIZE'] + config['META']['QUERY_SET_SIZE']
-    train_dataset = TimeSeriesForecastingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'train',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx,config['GENERAL']['DEVICE'])
-    val_dataset = TimeSeriesForecastingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'valid',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx,config['GENERAL']['DEVICE'])
-    test_dataset = TimeSeriesForecastingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'test',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx,config['GENERAL']['DEVICE'])
+    train_dataset = TimeSeriesForecastingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'train',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],1,adj_mx,config['GENERAL']['DEVICE'])
+    val_dataset = TimeSeriesForecastingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'valid',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],1,adj_mx,config['GENERAL']['DEVICE'])
+    test_dataset = TimeSeriesForecastingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'test',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],1,adj_mx,config['GENERAL']['DEVICE'])
     # meta_train_dataset = l2l.data.MetaDataset(train_dataset)
     # print(meta_train_dataset)
     # from learn2learn.data import TaskDataset
