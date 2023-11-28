@@ -26,6 +26,8 @@ from basicts.utils import load_pkl
 from tqdm import tqdm
 from collections import OrderedDict
 import learn2learn as l2l
+l2l.data.MetaDataset(mnist)
+l2l.data.MetaDataset
 from utils import edge_index_transform
 from torch_geometric.utils import dense_to_sparse,negative_sampling,k_hop_subgraph,is_undirected,to_undirected,dropout_adj
 def drop_edge(adj_mx):
@@ -144,31 +146,32 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
     loss = 0.0
     for idx, data in enumerate(tqdm(train_data_loader)):
 
-        learner = maml.clone()
-
+        
+        # batch_size = data[0].shape[0]
         meta_train_loss = 0.0
         future_data = data[0].to(device)
         history_data = data[1].to(device)
         k_hop_index = data[4]
-
         batch_size = future_data.shape[0]
-
         
+        # B L N C
         labels = future_data[:, :, :, config["MODEL"]["TARGET_FEATURES"]]
         
         real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
         # print(real_value_rescaled.shape)
-        for i in random.sample(range(num_nodes), 10): # task random.sample(range(num_nodes), 10)
+        # anchor_nodes = random.sample(range(num_nodes), 10) # task random.sample(range(num_nodes), 10)
+        for i in range(batch_size): # task per step
         # for i in range(num_nodes):
+            learner = maml.clone()
             for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-                preds = learner(history_data,future_data,batch_size,1,True)
+                preds = learner(history_data[i],future_data[i],batch_size,1,True)
                 preds = preds[:, :, :, config["MODEL"]["FROWARD_FEATURES"]]
                 prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
-                support_loss = metric_forward(masked_mae, [prediction_rescaled[:,:,k_hop_index[i],:], real_value_rescaled[:,:,k_hop_index[i],:]])
+                support_loss = metric_forward(masked_mae, [prediction_rescaled[:,:,k_hop_index,:], real_value_rescaled[:,:,k_hop_index,:]])
                 learner.adapt(support_loss)
-            query_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,i,:], real_value_rescaled[:,:,i,:]])
+            query_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,:,:], real_value_rescaled[:,:,:,:]])
             meta_train_loss += query_loss
-        meta_train_loss /=num_nodes
+        # meta_train_loss /=num_nodes
         optimizer.zero_grad()
         meta_train_loss.backward()
         optimizer.step()
@@ -234,19 +237,7 @@ def main(config):
                 config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
                 config['MODEL']['STGCN']['droprate'])
     print(model)
-    # print('ff')
-    # dd
-    # model = nn.Linear(10,10)
-    # print(model.W.data)
 
-    # dd
-    # model = MultiLayerPerceptron(12,12,32)
-    
-    # model = GraphWaveNet(207,0.3,[torch.tensor(i) for i in adj_mx],True,True,None,3)
-    # model = MultiLayerPerceptron(12,12,32)
-    
-    # print(net)
-    # model.load_state_dict(torch.load(config['GENERAL']['MODEL_SAVE_PATH']+'5/STGCN.pt'))
     print(config['GENERAL']['DEVICE'])
     model = model.to(config['GENERAL']['DEVICE'])
 
