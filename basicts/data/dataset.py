@@ -11,7 +11,7 @@ import math
 class TimeSeriesForecastingDataset(Dataset):
     """Time series forecasting dataset."""
 
-    def __init__(self, data_file_path: str, index_file_path: str, mode: str,support_set_size, query_set_size, adj_mx,k_hop, device) -> None:
+    def __init__(self, data_file_path: str, index_file_path: str, mode: str,support_set_size, query_set_size, adj_mx, device) -> None:
         super().__init__()
         assert mode in ["train", "valid", "test"], "error mode"
         self._check_if_file_exists(data_file_path, index_file_path)
@@ -28,7 +28,7 @@ class TimeSeriesForecastingDataset(Dataset):
         self.device = device
         self.top_k = 10
         self.neighbor_index = self.create_neighbor_index()
-        self.k_hop_index = self.creat_k_hop_neighbor_index(k_hop)
+        self.k_hop_index = self.creat_k_hop_neighbor_index()
 
     def _check_if_file_exists(self, data_file_path: str, index_file_path: str):
         """Check if data file and index file exist.
@@ -98,7 +98,7 @@ class TimeSeriesForecastingDataset(Dataset):
         edge_index, _ = dense_to_sparse(adj_mx.long())
         k_hop_index = []
         for i in range(adj_mx.shape[0]):
-            subset, k_hop_edge_index, mapping, edge_mask = k_hop_subgraph(i, k_hop, edge_index)
+            subset, k_hop_edge_index, mapping, edge_mask = k_hop_subgraph(i, 1, edge_index)
             if subset.shape == 1: # consider isolated vertex
                 subset = torch.tensor([i,i].long()).to(self.device)
             subset = subset[:-1]
