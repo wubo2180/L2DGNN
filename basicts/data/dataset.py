@@ -90,7 +90,7 @@ class TimeSeriesForecastingDataset(Dataset):
             index_non_zero.append(torch.nonzero(adj_mx[i].squeeze().to(self.device)))
   
         return index_non_zero
-    def creat_k_hop_neighbor_index(self,k_hop):
+    def creat_k_hop_neighbor_index(self):
         adj_mx = self.adj_mx
         adj_mx[torch.abs(self.adj_mx)>0] = 1.0
         for i in range(adj_mx.shape[0]):
