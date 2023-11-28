@@ -167,8 +167,8 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
                 preds = learner(history_data,future_data,batch_size,1,True)
                 preds = preds[i, :, :, config["MODEL"]["FROWARD_FEATURES"]]
                 prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
-                for hop in k_hop_index:
-                    support_loss += metric_forward(masked_mae, [prediction_rescaled[i,:,hop[0][0],:], real_value_rescaled[i,:,hop[0][0],:]])
+                for k in range(len(k_hop_index)):
+                    support_loss += metric_forward(masked_mae, [prediction_rescaled[i,:,k_hop_index[k],:], real_value_rescaled[i,:,k_hop_index[k],:]])
                 # print(k_hop_index)
                 # dd
                 # support_loss = metric_forward(masked_mae, [prediction_rescaled[i,:,k_hop_index,:], real_value_rescaled[i,:,k_hop_index,:]])
