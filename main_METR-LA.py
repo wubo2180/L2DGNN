@@ -173,7 +173,7 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
                 # prediction = real_value_rescaled[i,:,:,:]
                 # real_value = real_value_rescaled[i,:,:,:]
                 for k in range(len(k_hop_index)):
-                    support_loss += metric_forward(masked_mae, [prediction_rescaled[i,k_hop_index[k],:], real_value_rescaled[i,:,k_hop_index[k],:]])
+                    support_loss += metric_forward(masked_mae, [prediction_rescaled[i,:,k_hop_index[k],:], real_value_rescaled[i,:,k_hop_index[k],:]])
                 # print(k_hop_index)
                 # dd
                 # support_loss = metric_forward(masked_mae, [prediction_rescaled[i,:,k_hop_index,:], real_value_rescaled[i,:,k_hop_index,:]])
