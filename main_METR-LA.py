@@ -150,10 +150,6 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
     num_nodes = config['GENERAL']['NUM_NODE']
     loss = 0.0
     for idx, data in enumerate(tqdm(train_data_loader)):
-        if idx > 0 :
-            break
-        
-        # batch_size = data[0].shape[0]
         meta_train_loss = 0.0
         future_data = data[0].to(device)
         history_data = data[1].to(device)
@@ -221,7 +217,7 @@ def main(config):
     config['MODEL']['STGCN']['n_vertex'] = adj_mx.shape[0]
     scaler = load_pkl(config['GENERAL']['SCALER_DIR'])
     # print(dense_to_sparse(adj_mx))
-    print('adj_mx',adj_mx.shape)
+    # print('adj_mx',adj_mx.shape)
     config['MODEL']['STGCN']['gso'] = adj_mx.to(config['GENERAL']['DEVICE'])
     # 加载数据集d
     # num_sampled_edges = config['META']['SUPPORT_SET_SIZE'] + config['META']['QUERY_SET_SIZE']
