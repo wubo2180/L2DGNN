@@ -24,25 +24,25 @@ from collections import OrderedDict
 import learn2learn as l2l
 import logging
 from utils import edge_index_transform
-from torch_geometric.utils import dense_to_sparse,negative_sampling,k_hop_subgraph,is_undirected,to_undirected,dropout_adj
+from torch_geometric.utils import dense_to_sparse,negative_sampling,k_hop_subgraph,is_undirected,to_undirected,dropout_edge
 logging.basicConfig(
     filename='log/metrics.log',  # 指定日志文件名
     level=logging.INFO,       # 设置日志级别为INFO
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-def drop_edge(adj_mx):
-    adj = adj_mx
-    adj_mx[torch.abs(adj_mx)>0] = 1.0
-    for i in range(adj_mx.shape[0]):
-        adj_mx[i,i] = 1.0
-    edge_index, _ = dense_to_sparse(adj_mx.long())
-    edge_index, _ = dropout_adj(edge_index, p = 0.5)
-    if not is_undirected(edge_index):
-        edge_index = to_undirected(edge_index)
-    row, col = edge_index
-    adj[row, col] = 0.0
-    return adj
+# def drop_edge(adj_mx):
+#     adj = adj_mx
+#     adj_mx[torch.abs(adj_mx)>0] = 1.0
+#     for i in range(adj_mx.shape[0]):
+#         adj_mx[i,i] = 1.0
+#     edge_index, _ = dense_to_sparse(adj_mx.long())
+#     edge_index, _ = drop_edge(edge_index, p = 0.5)
+#     if not is_undirected(edge_index):
+#         edge_index = to_undirected(edge_index)
+#     row, col = edge_index
+#     adj[row, col] = 0.0
+#     return adj
 
 def metric_forward(metric_func, args):
     """Computing metrics.
@@ -214,7 +214,7 @@ def main(config):
     adj_mx, _ = load_adj(config['GENERAL']['ADJ_DIR'], "normlap")
     
     adj_mx = torch.Tensor(adj_mx[0])
-    adj_mx = drop_edge(adj_mx)
+    # adj_mx = drop_edge(adj_mx)
     config['GENERAL']['NUM_NODE'] = adj_mx.shape[0]
     # print(adj_mx)
     config['MODEL']['STGCN']['n_vertex'] = adj_mx.shape[0]
