@@ -162,7 +162,7 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         for i in range(batch_size): # task per step
         # for i in range(num_nodes):
             print(i)
-            dd
+            # dd
             learner = maml.clone()
             support_loss = 0
             for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
