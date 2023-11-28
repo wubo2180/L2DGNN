@@ -150,7 +150,8 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
     num_nodes = config['GENERAL']['NUM_NODE']
     loss = 0.0
     for idx, data in enumerate(tqdm(train_data_loader)):
-
+        if idx > 0 :
+            break
         
         # batch_size = data[0].shape[0]
         meta_train_loss = 0.0
@@ -227,22 +228,6 @@ def main(config):
     train_dataset = TimeSeriesForecastingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'train',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx,config['GENERAL']['DEVICE'])
     val_dataset = TimeSeriesForecastingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'valid',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx,config['GENERAL']['DEVICE'])
     test_dataset = TimeSeriesForecastingDataset(config['GENERAL']['DATASET_DIR'],config['GENERAL']['DATASET_INDEX_DIR'],'test',config['META']['SUPPORT_SET_SIZE'],config['META']['QUERY_SET_SIZE'],adj_mx,config['GENERAL']['DEVICE'])
-    # meta_train_dataset = l2l.data.MetaDataset(train_dataset)
-    # print(meta_train_dataset)
-    # from learn2learn.data import TaskDataset
-    # dataset = l2l.data.MetaDataset(train_dataset)
-    # transforms = [
-    # l2l.data.transforms.NWays(dataset, n=5),
-    # l2l.data.transforms.KShots(dataset, k=1),
-    # l2l.data.transforms.LoadData(dataset),
-    #             ]
-    # taskset = TaskDataset(dataset, transforms, num_tasks=20000)
-    # for task in taskset:
-    #     X, y = task
-    # dd
-    print(len(train_dataset))
-    print(len(val_dataset))
-    print(len(test_dataset))
 
     train_data_loader = DataLoader(train_dataset, batch_size=config['TRAIN']['DATA_BATCH_SIZE'], shuffle=True)
     val_data_loader = DataLoader(val_dataset, batch_size=config['VAL']['DATA_BATCH_SIZE'], shuffle=False)
@@ -252,29 +237,23 @@ def main(config):
                 config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
                 config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
                 config['MODEL']['STGCN']['droprate'])
-    # print(model)
 
-    print(config['GENERAL']['DEVICE'])
     model = model.to(config['GENERAL']['DEVICE'])
 
 
     maml = l2l.algorithms.MAML(model, lr=config['OPTIM']['ADAPT_LR'], first_order=False, allow_unused=True)
     optimizer = optim.Adam(model.parameters(), config['OPTIM']['META_LR'], weight_decay=1.0e-5,eps=1.0e-8)
-    # optimizer = optim.Adam(model.parameters(), lr=config['OPTIM']['LR'], weight_decay=1.0e-5,eps=1.0e-8)
-    # print(optimizer)
-    # dd
+
     for epoch in range(config['TRAIN']['EPOCHS']):
         print('============ epoch {:d} ============'.format(epoch))
         train(train_data_loader,model,config,scaler,optimizer,maml)
         val(val_data_loader,model,config,scaler)
         test(test_data_loader,model,config,scaler)
-        # path = config['GENERAL']['MODEL_SAVE_PATH']+str(epoch)
-        # if not os.path.exists(path):
-        #     os.mkdir(path)
-        #     file = os.path.join(path,config['GENERAL']['MODEL_NAME']+'.pt')
-        #     print(file)
-        #     torch.save(model.state_dict(), file)
-    
+        path = config['GENERAL']['MODEL_SAVE_PATH']+str(epoch)
+        if not os.path.exists(path):
+            os.mkdir(path)
+            file = os.path.join(path,config['GENERAL']['MODEL_NAME']+'.pt')
+            torch.save(model.state_dict(), file)
 
 if __name__ == "__main__":
 
