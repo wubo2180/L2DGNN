@@ -151,8 +151,8 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         future_data = data[0].to(device)
         history_data = data[1].to(device)
         k_hop_index = data[4]
-        batch_size = future_data.shape[0]
-        
+        batch_size = config['TRAIN']['DATA_BATCH_SIZE']
+        # print(batch_size)
         # B L N C
         labels = future_data[:, :, :, config["MODEL"]["TARGET_FEATURES"]]
         
