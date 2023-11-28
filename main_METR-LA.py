@@ -185,23 +185,23 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         optimizer.zero_grad()
         meta_train_loss.backward()
         optimizer.step()
-        loss += meta_train_loss.item()
+    #     loss += meta_train_loss.item()
 
-        prediction.append(prediction_rescaled.detach().cpu())        # preds = forward_return[0]
-        real_value.append(real_value_rescaled.detach().cpu())        # testy = forward_return[1]
+    #     prediction.append(prediction_rescaled.detach().cpu())        # preds = forward_return[0]
+    #     real_value.append(real_value_rescaled.detach().cpu())        # testy = forward_return[1]
 
-    # prediction 
-    prediction = torch.cat(prediction, dim=0) 
-    real_value = torch.cat(real_value, dim=0)
-    # re-scale data
-    # compute train metrics
-    metric_results = {}
-    for metric_name, metric_func in metrics.items():
-        metric_item = metric_forward(metric_func, [prediction, real_value])
-        metric_results[metric_name] = metric_item.item()
-    print("Evaluate train data" + \
-                "train MAE: {:.4f}, train RMSE: {:.4f}, train MAPE: {:.4f}".format(metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"]))
-    print(loss/(idx+1))
+    # # prediction 
+    # prediction = torch.cat(prediction, dim=0) 
+    # real_value = torch.cat(real_value, dim=0)
+    # # re-scale data
+    # # compute train metrics
+    # metric_results = {}
+    # for metric_name, metric_func in metrics.items():
+    #     metric_item = metric_forward(metric_func, [prediction, real_value])
+    #     metric_results[metric_name] = metric_item.item()
+    # print("Evaluate train data" + \
+    #             "train MAE: {:.4f}, train RMSE: {:.4f}, train MAPE: {:.4f}".format(metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"]))
+    # print(loss/(idx+1))
     
 def main(config):
     # adj_orig, _ = load_adj(config['GENERAL']['ADJ_DIR'], "normlap")
