@@ -166,6 +166,8 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
                 preds = learner(history_data,future_data,batch_size,1,True)
                 preds = preds[i, :, :, config["MODEL"]["FROWARD_FEATURES"]]
                 prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
+                print(k_hop_index)
+                dd
                 support_loss = metric_forward(masked_mae, [prediction_rescaled[i,:,k_hop_index,:], real_value_rescaled[i,:,k_hop_index,:]])
                 learner.adapt(support_loss)
             query_loss = metric_forward (masked_mae, [prediction_rescaled[i,:,:,:], real_value_rescaled[i,:,:,:]])
