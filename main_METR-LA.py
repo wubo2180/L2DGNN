@@ -245,7 +245,7 @@ def main(config):
                 config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
                 config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
                 config['MODEL']['STGCN']['droprate'])
-    print(model)
+    # print(model)
 
     print(config['GENERAL']['DEVICE'])
     model = model.to(config['GENERAL']['DEVICE'])
@@ -254,7 +254,7 @@ def main(config):
     maml = l2l.algorithms.MAML(model, lr=config['OPTIM']['ADAPT_LR'], first_order=False, allow_unused=True)
     optimizer = optim.Adam(model.parameters(), config['OPTIM']['META_LR'], weight_decay=1.0e-5,eps=1.0e-8)
     # optimizer = optim.Adam(model.parameters(), lr=config['OPTIM']['LR'], weight_decay=1.0e-5,eps=1.0e-8)
-    print(optimizer)
+    # print(optimizer)
     # dd
     for epoch in range(config['TRAIN']['EPOCHS']):
         print('============ epoch {:d} ============'.format(epoch))
