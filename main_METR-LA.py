@@ -132,6 +132,9 @@ def test(test_data_loader,model,config,scaler):
 
             print("Evaluate best model on test data for horizon " + \
                 "{:d}, Test MAE: {:.4f}, Test RMSE: {:.4f}, Test MAPE: {:.4f}".format(i+1,metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"]))
+            logging.info("Evaluate best model on test data for horizon " + \
+                "{:d}, Test MAE: {:.4f}, Test RMSE: {:.4f}, Test MAPE: {:.4f}".format(i+1,metric_results["MAE"], metric_results["RMSE"], metric_results["MAPE"]))
+            
         metric_results = {}
         for metric_name, metric_func in metrics.items():
             metric_item = metric_forward(metric_func, [prediction, real_value])
