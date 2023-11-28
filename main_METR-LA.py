@@ -26,8 +26,7 @@ from basicts.utils import load_pkl
 from tqdm import tqdm
 from collections import OrderedDict
 import learn2learn as l2l
-l2l.data.MetaDataset(mnist)
-l2l.data.MetaDataset
+
 from utils import edge_index_transform
 from torch_geometric.utils import dense_to_sparse,negative_sampling,k_hop_subgraph,is_undirected,to_undirected,dropout_adj
 def drop_edge(adj_mx):
