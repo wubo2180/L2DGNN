@@ -169,6 +169,7 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
                 preds = learner(history_data,future_data,batch_size,1,True)
                 preds = preds[i, :, :, config["MODEL"]["FROWARD_FEATURES"]]
                 prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
+                print(prediction_rescaled.shape)
                 prediction = prediction_rescaled[i,:,:,:]
                 real_value = real_value_rescaled[i,:,:,:]
                 for k in range(len(k_hop_index)):
