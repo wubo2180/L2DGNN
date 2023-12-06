@@ -165,27 +165,27 @@ def train(train_data_loader,model,config,scaler,optimizer,maml):
         real_value_rescaled = SCALER_REGISTRY.get(scaler["func"])(labels, **scaler["args"])
         # print(real_value_rescaled.shape)
         # anchor_nodes = random.sample(range(num_nodes), 10) # task random.sample(range(num_nodes), 10)
-        for i in range(batch_size): # task per step
+        # for i in range(batch_size): # task per step
         # for i in range(num_nodes):
             # print(i)
             # dd
-            learner = maml.clone()
-            support_loss = 0
-            for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
-                preds = learner(history_data,future_data,batch_size,1,True)
-                preds = preds[:, :, :, config["MODEL"]["FROWARD_FEATURES"]]
-                prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
-                # print(prediction_rescaled.shape)
-                # prediction = real_value_rescaled[i,:,:,:]
-                # real_value = real_value_rescaled[i,:,:,:]
-                for k in range(len(k_hop_index)):
-                    support_loss += metric_forward(masked_mae, [prediction_rescaled[i,:,k_hop_index[k],:], real_value_rescaled[i,:,k_hop_index[k],:]])
-                # print(k_hop_index)
-                # dd
-                # support_loss = metric_forward(masked_mae, [prediction_rescaled[i,:,k_hop_index,:], real_value_rescaled[i,:,k_hop_index,:]])
-                learner.adapt(support_loss)
+        learner = maml.clone()
+        support_loss = 0
+        for j in range(config['META']['UPDATE_SAPCE_STEP']): #args.update_sapce_step
+            preds = learner(history_data,future_data,batch_size,1,True)
+            preds = preds[:, :, :, config["MODEL"]["FROWARD_FEATURES"]]
+            prediction_rescaled = SCALER_REGISTRY.get(scaler["func"])(preds, **scaler["args"])
+            # print(prediction_rescaled.shape)
+            # prediction = real_value_rescaled[i,:,:,:]
+            # real_value = real_value_rescaled[i,:,:,:]
+            for k in range(len(k_hop_index)):
+                support_loss += metric_forward(masked_mae, [prediction_rescaled[:,:,k_hop_index[k],:], real_value_rescaled[:,:,k_hop_index[k],:]])
+            # print(k_hop_index)
+            # dd
+            # support_loss = metric_forward(masked_mae, [prediction_rescaled[i,:,k_hop_index,:], real_value_rescaled[i,:,k_hop_index,:]])
+            learner.adapt(support_loss)
             
-            query_loss = metric_forward (masked_mae, [prediction_rescaled[i,:,:,:], real_value_rescaled[i,:,:,:]])
+            query_loss = metric_forward (masked_mae, [prediction_rescaled[:,:,:,:], real_value_rescaled[:,:,:,:]])
             meta_train_loss += query_loss
         # meta_train_loss /=num_nodes
         optimizer.zero_grad()
@@ -232,10 +232,10 @@ def main(config):
     val_data_loader = DataLoader(val_dataset, batch_size=config['VAL']['DATA_BATCH_SIZE'], shuffle=False)
     test_data_loader = DataLoader(test_dataset, batch_size=config['TEST']['DATA_BATCH_SIZE'], shuffle=False)
 
-    model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
-                config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
-                config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
-                config['MODEL']['STGCN']['droprate'])
+    # model = STGCN(config['MODEL']['STGCN']['Ks'],config['MODEL']['STGCN']['Kt'],config['MODEL']['STGCN']['blocks'],
+    #             config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
+    #             config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
+    #             config['MODEL']['STGCN']['droprate'])
     model = Linear(12,12)
 
     model = model.to(config['GENERAL']['DEVICE'])
