@@ -11,7 +11,7 @@ import torchvision.transforms as transforms
 import yaml
 # import argparser
 from argparse import ArgumentParser
-from basicts.archs import STGCN
+from basicts.archs import STGCN, Linear
 from basicts.data import TimeSeriesForecastingDataset
 from torch.utils.data import Dataset, DataLoader
 from basicts.utils import load_adj
@@ -236,6 +236,7 @@ def main(config):
                 config['MODEL']['STGCN']['T'],config['MODEL']['STGCN']['n_vertex'],config['MODEL']['STGCN']['act_func'],
                 config['MODEL']['STGCN']['graph_conv_type'],config['MODEL']['STGCN']['gso'],config['MODEL']['STGCN']['bias'],
                 config['MODEL']['STGCN']['droprate'])
+    model = Linear(12,12)
 
     model = model.to(config['GENERAL']['DEVICE'])
 
